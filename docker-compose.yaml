@@ -1,0 +1,26 @@
+services:
+  postgres:
+    image: 'postgres:16'
+    environment:
+      POSTGRES_DB: sift
+      POSTGRES_USER: sift
+      POSTGRES_PASSWORD: sift
+    ports:
+      - '5432:5432'
+    volumes:
+      - 'sift-pgdata:/var/lib/postgresql/data'
+    healthcheck:
+      test: [ 'CMD-SHELL', 'pg_isready -U sift -d sift' ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 로컬 메일 캡처 (MailHog 후속. arm64/Apple Silicon 호환 양호)
+  mailpit:
+    image: 'axllent/mailpit:latest'
+    ports:
+      - '1025:1025'   # SMTP
+      - '8025:8025'   # Web UI -> http://localhost:8025
+
+volumes:
+  sift-pgdata:
