@@ -3,8 +3,10 @@
  * <p>
  * 다른 모듈과는 도메인 이벤트로 통신한다. 코드 의존이 생기면 allowedDependencies 를 확장한다.
  */
-@org.springframework.modulith.ApplicationModule(
+@ApplicationModule(
         displayName = "Subscriber",
         allowedDependencies = {"common"}
 )
 package com.siftnews.subscriber;
+
+import org.springframework.modulith.ApplicationModule;

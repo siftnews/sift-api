@@ -6,7 +6,10 @@
  * config/auditing 등 세부 구성은 internal 서브패키지에 둔다.
  * common 은 어떤 비즈니스 모듈에도 의존하지 않는다(단방향 공용).
  */
-@org.springframework.modulith.ApplicationModule(
-        displayName = "Common"
+@ApplicationModule(
+        displayName = "Common",
+        allowedDependencies = {}
 )
 package com.siftnews.common;
+
+import org.springframework.modulith.ApplicationModule;
