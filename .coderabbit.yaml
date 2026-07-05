@@ -77,10 +77,39 @@ reviews:
           강제하지 말고 가볍게 제안만)
         - 불필요한 boxing/unboxing 지적
 
+        [7] 관측성 (이 프로젝트는 "측정→분석→개선" 서사가 핵심 — 측정 없는 개선 없음)
+        - 새 배치 Job/Step에 처리량(건수)·소요시간 측정이 함께 들어왔는지 확인 —
+          측정 없이 기능만 추가되면 지적 (JobExecutionListener/StepExecutionListener 계측 권장)
+        - 메트릭은 Micrometer 사용, 네이밍은 점 표기 + 도메인 접두어 (예: sift.collection.articles.saved,
+          sift.delivery.send.duration). Actuator/Prometheus로 수집되므로 벤더 중립 API만 사용
+        - 태그 카디널리티 폭발 주의: subscriberId, email, URL, articleId 등 무한 증가 값을
+          메트릭 태그로 쓰면 지적 (topicId, sourceId, status처럼 유한한 값만 허용)
+        - 로깅:
+          * 청크 루프 내부의 건별 INFO 로그 지적 (10만 건 발송 시 로그 폭증·성능 저하) —
+            chunk/Step/Job 단위 요약 로그로 대체 권장
+          * email 등 개인정보를 로그에 평문 노출 시 지적 (마스킹 필수)
+          * 파라미터화된 로깅(logger.info("... {}", v)) 사용 — 문자열 연결·String.format 지적
+        - 예외 삼킴 금지: catch 후 로그 없이 무시하면 지적. 로그 후 rethrow하는 중복 기록도 지적
+        - 실패 관측: delivery_task의 last_error, 배치 ExitStatus 등 실패 원인이 추적 가능한 형태로
+          기록되는지 확인 — 예외 메시지를 버리고 상태만 바꾸는 코드 지적
+        - 선별 로직: article_score의 breakdown JSON(점수 산출 근거)은 튜닝·평가의 토대 —
+          스코어 계산이 근거 기록 없이 최종 점수만 저장하면 지적
+
         [Severity Guide]
         모든 피드백은 Comment로 남기고, 개선 방향을 함께 제안하십시오.
-        - 중점: 아키텍처 원칙 위반 (모듈 경계, 헥사고날 의존 방향, 상태 머신, 멱등성, 예외 정책)
+        - 중점: 아키텍처 원칙 위반 (모듈 경계, 헥사고날 의존 방향, 상태 머신, 멱등성, 예외 정책),
+          배치 측정 누락·태그 카디널리티 등 관측성 원칙 위반
         - 코드 품질, 성능, 네이밍은 가볍게 제안
+
+    - path: "src/main/resources/**/*.yaml"
+      instructions: |
+        설정 파일 규칙:
+        - Actuator 엔드포인트 노출 범위 확인: management.endpoints.web.exposure.include에
+          "*" 전체 노출 시 지적 — health, info, metrics, prometheus 등 필요한 것만 명시
+        - 로그 레벨: 운영 대상 프로파일에서 DEBUG/TRACE 기본값 지적
+        - 커넥션 풀·타이머 등 성능 관련 설정 변경 시 근거(측정 결과) 요청 —
+          이 프로젝트는 설정 튜닝도 측정과 함께 기록하는 것이 원칙
+        - 비밀값(SMTP 자격증명, DB 패스워드 등) 하드코딩 지적 — 환경변수 치환 사용
 
     - path: "src/test/**/*.java"
       instructions: |
