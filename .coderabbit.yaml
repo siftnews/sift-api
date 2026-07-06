@@ -41,7 +41,7 @@ reviews:
           (예: source 모듈이 발송 상태를 변경, delivery 모듈이 기사 스코어링 수행)
 
         [1] Spring Modulith 모듈 경계
-        - 모듈 간 통신은 도메인 이벤트(ApplicationEventPublisher) 우선
+        - 모듈 간 통신은 도메인 이벤트를 우선 고려
         - 동기 조회가 꼭 필요하면 port.in을 named interface로만 노출
         - 다른 모듈의 internal 패키지 직접 참조 지적 (ApplicationModules.verify()로 강제됨)
         - 모듈은 common 외 다른 모듈에 컴파일 의존 금지
@@ -102,6 +102,7 @@ reviews:
         - 코드 품질, 성능, 네이밍은 가볍게 제안
 
     - path: "src/main/resources/**/*.yaml"
+    - path: "src/test/resources/**/*.yaml"
       instructions: |
         설정 파일 규칙:
         - Actuator 엔드포인트 노출 범위 확인: management.endpoints.web.exposure.include에
