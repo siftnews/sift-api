@@ -1,0 +1,15 @@
+spring:
+  # datasource 는 Testcontainers @ServiceConnection 이 주입한다.
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  # 배치 메타테이블은 테스트 컨텍스트에서 필요 시 초기화한다.
+  batch:
+    jdbc:
+      initialize-schema: always
+    job:
+      enabled: false
