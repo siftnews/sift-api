@@ -101,8 +101,7 @@ reviews:
           배치 측정 누락·태그 카디널리티 등 관측성 원칙 위반
         - 코드 품질, 성능, 네이밍은 가볍게 제안
 
-    - path: "src/main/resources/**/*.yaml"
-    - path: "src/test/resources/**/*.yaml"
+    - path: "src/{main,test}/resources/**/*.yaml"
       instructions: |
         설정 파일 규칙:
         - Actuator 엔드포인트 노출 범위 확인: management.endpoints.web.exposure.include에
