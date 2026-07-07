@@ -1,8 +1,8 @@
 package com.siftnews.source.domain;
 
+import com.siftnews.common.UriNormalizer;
 import lombok.Getter;
 
-import java.net.URI;
 import java.time.Instant;
 
 @Getter
@@ -31,17 +31,16 @@ public class Article {
     }
 
     public static Article create(RawArticle raw, Long sourceId) {
-        String normalizedUrl = normalize(raw.url());
+        String normalizedUrl = normalizeOrThrow(raw.url());
         return new Article(null, sourceId, raw.url(), normalizedUrl,
                 raw.title(), raw.body(), raw.lang(), raw.publishedAt(), raw.category());
     }
 
-    private static String normalize(String url) {
-        if (url == null || url.isBlank()) {
-            throw new ArticleException("article url은 비어 있을 수 없습니다.");
+    private static String normalizeOrThrow(String url) {
+        try {
+            return UriNormalizer.normalize(url);
+        } catch (IllegalArgumentException e) {
+            throw new ArticleException("article url이 유효하지 않습니다: " + url, e);
         }
-        URI uri = URI.create(url);
-        String host = uri.getHost().toLowerCase();
-        return uri.getScheme() + "://" + host + uri.getPath();
     }
 }

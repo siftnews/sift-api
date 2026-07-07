@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class ArticleTest {
 
     @Test
-    void createNormalizesUrlByRemovingQueryStringAndLowercasingHost() {
+    void createNormalizesUrlViaUriNormalizer() {
         RawArticle raw = new RawArticle(
                 "https://Example.COM/news/1?utm_source=abc&ref=xyz",
                 "제목",
