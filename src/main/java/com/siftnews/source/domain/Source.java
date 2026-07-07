@@ -32,6 +32,10 @@ public class Source {
     }
 
     public void markCrawled(Instant at) {
+        if (at == null) {
+            throw new SourceException("lastCrawledAt은 null일 수 없습니다.");
+        }
+
         this.lastCrawledAt = at;
     }
 }
