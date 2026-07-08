@@ -34,6 +34,12 @@ public class UriNormalizer {
         if (uri.getScheme() == null || uri.getHost() == null) {
             throw new IllegalArgumentException("유효한 http(s) url이 아닙니다: " + url);
         }
+
+        String scheme = uri.getScheme();
+        if (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https")) {
+            throw new IllegalArgumentException("지원되지 않는 url 스킴입니다: " + scheme);
+        }
+
         return uri;
     }
 
