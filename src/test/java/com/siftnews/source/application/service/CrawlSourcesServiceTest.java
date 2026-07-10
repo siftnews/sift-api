@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -82,7 +83,7 @@ class CrawlSourcesServiceTest {
     }
 
     @Test
-    void crawlThrowsSourceExceptionWhenSourceIsNotActive() {
+    void crawlThrowsSourceExceptionWhenSourceDoesNotExist() {
         assertThatThrownBy(() -> service.crawl(999L))
                 .isInstanceOf(SourceException.class)
                 .hasMessageContaining("999");
@@ -106,6 +107,13 @@ class CrawlSourcesServiceTest {
         @Override
         public List<Source> loadActive() {
             return sources;
+        }
+
+        @Override
+        public Optional<Source> findActiveById(Long sourceId) {
+            return sources.stream()
+                    .filter(source -> source.getSourceId().equals(sourceId))
+                    .findFirst();
         }
     }
 

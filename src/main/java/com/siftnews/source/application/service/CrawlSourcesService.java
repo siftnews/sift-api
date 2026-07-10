@@ -33,9 +33,7 @@ public class CrawlSourcesService implements CrawlSourcesUseCase {
     }
 
     private Source findActiveSource(Long sourceId) {
-        return loadActiveSourcesPort.loadActive().stream()
-                .filter(source -> source.getSourceId().equals(sourceId))
-                .findFirst()
+        return loadActiveSourcesPort.findActiveById(sourceId)
                 .orElseThrow(() -> new SourceException("활성 소스를 찾을 수 없습니다: " + sourceId));
     }
 
