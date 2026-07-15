@@ -52,6 +52,9 @@ out/
 ### OMC 운영 상태 ###
 .omc/
 
+### Graphify 파생 인덱스 — 원본 아님, 재생성 가능 (D-023) ###
+graphify-out/
+
 SPEC.md
 **/SPEC.md
 

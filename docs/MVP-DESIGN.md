@@ -1,6 +1,6 @@
 # Sift — MVP 상세 설계
 
-> 상위 기획 [PLAN.md](https://github.com/siftnews/sift-docs/blob/main/PLAN.md) · 선별 상세 [SELECTION.md](./SELECTION.md) · 최종 수정: 2026-07-07 (D-018·D-019 반영)
+> 상위 기획 [PLAN.md](https://github.com/siftnews/sift-docs/blob/main/PLAN.md) · 선별 상세 [SELECTION.md](./SELECTION.md) · 최종 수정: 2026-07-13 (M1-4 Source 영속 어댑터 반영, D-022)
 >
 > 범위: V1(베이스라인) 구현을 위한 ERD · 배치 Job/Step · 포트 시그니처
 
@@ -156,8 +156,10 @@ Step retryStep   (chunk = 500)
 in   CrawlSourcesUseCase      crawlAll() / crawl(sourceId)
 in   (named interface)        후보 기사 조회 — Content의 LoadCandidateArticlesPort가 경유 (D-018)
 out  LoadActiveSourcesPort    loadActive(): List<Source>
+                              findActiveById(sourceId): Optional<Source>   // crawl(sourceId) 단일 조회 (PR #9 리뷰 반영)
 out  FetchFeedPort            fetch(source): List<RawArticle>
 out  SaveArticlePort          saveNew(articles): int        // 중복 무시
+out  UpdateSourcePort         markCrawled(sourceId, at)     // last_crawled_at 영속 반영 (D-022)
 ```
 > **Article 애그리거트는 Source 소유 (D-018).** article 테이블 스키마·멱등(UNIQUE normalized_url)의 책임자는 Source. named interface 시그니처는 구현 이슈에서 확정.
 
@@ -213,4 +215,5 @@ out  SendEmailPort                  send(email): SendResult               // SUC
 - [ ] 템플릿 엔진: Thymeleaf vs Mustache (메일 렌더링) → TASKS M3 sendStep 이슈
 - [ ] 부하 테스트 시나리오: 구독자 10만 시드 데이터 생성 방법 → TASKS M4 (선호 시각 분포 포함 — D-019)
 - [ ] issue 상태 완료 판정: 발송이 24시간에 분산(D-019)될 때 SENDING → SENT 전이 시점 정의 (마지막 시간대 완료? 일 마감?) → M3 발송 스냅샷 이슈
+- [x] `Source.markCrawled()` 영속 반영: 전용 포트 `UpdateSourcePort` 신설로 결정 (D-022, 2026-07-13). `source.trust_score` 컬럼은 M1-4 범위에서 제외(도메인 미사용) — M2 스코어링 구현 시 재검토
 - [x] → 다음: **프로젝트 스캐폴딩** (`sift-api` Spring 골격 + 모듈/패키지) — 완료, 첫 배치 Job은 TASKS M1
