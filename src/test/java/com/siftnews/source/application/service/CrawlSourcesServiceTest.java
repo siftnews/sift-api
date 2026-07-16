@@ -3,6 +3,7 @@ package com.siftnews.source.application.service;
 import com.siftnews.source.application.port.out.FetchFeedPort;
 import com.siftnews.source.application.port.out.LoadActiveSourcesPort;
 import com.siftnews.source.application.port.out.SaveArticlePort;
+import com.siftnews.source.application.port.out.UpdateSourcePort;
 import com.siftnews.source.domain.Article;
 import com.siftnews.source.domain.Category;
 import com.siftnews.source.domain.RawArticle;
@@ -30,10 +31,11 @@ class CrawlSourcesServiceTest {
     private final FakeLoadActiveSourcesPort loadActiveSourcesPort = new FakeLoadActiveSourcesPort();
     private final FakeFetchFeedPort fetchFeedPort = new FakeFetchFeedPort();
     private final FakeSaveArticlePort saveArticlePort = new FakeSaveArticlePort();
+    private final FakeUpdateSourcePort updateSourcePort = new FakeUpdateSourcePort();
     private final Clock clock = Clock.fixed(FIXED_NOW, ZoneOffset.UTC);
 
     private final CrawlSourcesService service =
-            new CrawlSourcesService(loadActiveSourcesPort, fetchFeedPort, saveArticlePort, clock);
+            new CrawlSourcesService(loadActiveSourcesPort, fetchFeedPort, saveArticlePort, updateSourcePort, clock);
 
     @Test
     void crawlAllSavesArticlesAndMarksEachActiveSourceCrawled() {
@@ -50,6 +52,8 @@ class CrawlSourcesServiceTest {
                 .containsExactlyInAnyOrder("https://hn.example.com/1", "https://blog.example.com/1");
         assertThat(hackerNews.getLastCrawledAt()).isEqualTo(FIXED_NOW);
         assertThat(techBlog.getLastCrawledAt()).isEqualTo(FIXED_NOW);
+        assertThat(updateSourcePort.markedCrawledAt(1L)).isEqualTo(FIXED_NOW);
+        assertThat(updateSourcePort.markedCrawledAt(2L)).isEqualTo(FIXED_NOW);
     }
 
     @Test
@@ -67,6 +71,29 @@ class CrawlSourcesServiceTest {
         assertThat(saveArticlePort.savedArticles())
                 .extracting(Article::getUrl)
                 .containsExactly("https://healthy.example.com/1");
+        assertThat(updateSourcePort.markedCrawledAt(1L)).isNull();
+        assertThat(updateSourcePort.markedCrawledAt(2L)).isEqualTo(FIXED_NOW);
+    }
+
+    @Test
+    void crawlAllAggregatesMarkCrawledFailuresAndStillProcessesOtherSources() {
+        Source broken = activeSource(1L, "Broken");
+        Source healthy = activeSource(2L, "Healthy");
+        loadActiveSourcesPort.addAll(broken, healthy);
+        fetchFeedPort.willReturn(1L, List.of(rawArticle("https://broken.example.com/1")));
+        fetchFeedPort.willReturn(2L, List.of(rawArticle("https://healthy.example.com/1")));
+        updateSourcePort.willThrow(1L, new RuntimeException("markCrawled 실패"));
+
+        assertThatThrownBy(service::crawlAll)
+                .isInstanceOf(SourceException.class)
+                .hasMessageContaining("1");
+
+        assertThat(saveArticlePort.savedArticles())
+                .extracting(Article::getUrl)
+                .containsExactlyInAnyOrder("https://broken.example.com/1", "https://healthy.example.com/1");
+        assertThat(healthy.getLastCrawledAt()).isEqualTo(FIXED_NOW);
+        assertThat(updateSourcePort.markedCrawledAt(1L)).isNull();
+        assertThat(updateSourcePort.markedCrawledAt(2L)).isEqualTo(FIXED_NOW);
     }
 
     @Test
@@ -80,6 +107,8 @@ class CrawlSourcesServiceTest {
 
         assertThat(target.getLastCrawledAt()).isEqualTo(FIXED_NOW);
         assertThat(other.getLastCrawledAt()).isNull();
+        assertThat(updateSourcePort.markedCrawledAt(1L)).isEqualTo(FIXED_NOW);
+        assertThat(updateSourcePort.markedCrawledAt(2L)).isNull();
     }
 
     @Test
@@ -150,6 +179,28 @@ class CrawlSourcesServiceTest {
         public int saveNew(List<Article> articles) {
             saved.addAll(articles);
             return articles.size();
+        }
+    }
+
+    private static class FakeUpdateSourcePort implements UpdateSourcePort {
+        private final Map<Long, Instant> markedAt = new HashMap<>();
+        private final Map<Long, RuntimeException> failuresBySourceId = new HashMap<>();
+
+        Instant markedCrawledAt(Long sourceId) {
+            return markedAt.get(sourceId);
+        }
+
+        void willThrow(Long sourceId, RuntimeException exception) {
+            failuresBySourceId.put(sourceId, exception);
+        }
+
+        @Override
+        public void markCrawled(Long sourceId, Instant at) {
+            RuntimeException failure = failuresBySourceId.get(sourceId);
+            if (failure != null) {
+                throw failure;
+            }
+            markedAt.put(sourceId, at);
         }
     }
 }
