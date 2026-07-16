@@ -18,8 +18,8 @@ import static com.siftnews.support.TestContainerImages.POSTGRES_IMAGE;
  * 바뀌고, Spring의 ApplicationContext 캐시가 옛 포트를 참조해 연결 실패로 이어진다.
  * JVM 종료 시 Ryuk이 정리한다.
  * <p>
- * 이 클래스는 추상 클래스이므로 테스트 대상으로 실행되지 않는다.
- * (docker 없이도 build 통과). 실제 영속 테스트는 이 베이스를 상속해 추가한다.
+ * 이 클래스 자체는 abstract라 테스트 대상으로 실행되지 않지만, 이를 상속한 테스트가
+ * 실행되면 static 블록에서 Docker 컨테이너가 기동되므로 Docker가 필요하다.
  */
 @SpringBootTest
 @ActiveProfiles("test")
