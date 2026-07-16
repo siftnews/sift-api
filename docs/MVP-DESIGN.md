@@ -22,11 +22,13 @@
 
 > 키워드/소스는 초안. 구현 후 breakdown 로그 보며 튜닝.
 
-| slug | name | cadence | lang | includeKeywords (예) | sourceCategories |
-|---|---|---|---|---|---|
-| `dev` | 개발/엔지니어링 | DAILY | ko,en | Spring, Kotlin, Java, Kubernetes, 백엔드, 아키텍처, DevOps, 데이터베이스 | dev, programming |
-| `ai` | AI/머신러닝 | DAILY | ko,en | LLM, Claude, GPT, RAG, 에이전트, 파인튜닝, 트랜스포머, 추론 | ai, ml |
-| `econ` | 경제/금융/투자 | DAILY (D-019: 전 토픽 DAILY 고정) | ko,en | 금리, 환율, 반도체, 인플레이션, 연준, Fed, 코스피, 실적 | economy, finance |
+| slug | name | lang | includeKeywords (예) | sourceCategories |
+|---|---|---|---|---|
+| `dev` | 개발/엔지니어링 | ko,en | Spring, Kotlin, Java, Kubernetes, 백엔드, 아키텍처, DevOps, 데이터베이스 | dev, programming |
+| `ai` | AI/머신러닝 | ko,en | LLM, Claude, GPT, RAG, 에이전트, 파인튜닝, 트랜스포머, 추론 | ai, ml |
+| `econ` | 경제/금융/투자 | ko,en | 금리, 환율, 반도체, 인플레이션, 연준, Fed, 코스피, 실적 | economy, finance |
+
+> 발송 주기는 전 토픽 **DAILY 고정** — cadence는 토픽 속성이 아님 (D-019).
 
 ### 소스 시드 (RSS 우선)
 - **공통/개발**: Hacker News, 각 사 기술블로그(우아한형제들·카카오·토스 등), Ars Technica
@@ -57,6 +59,8 @@ subscriber ──1:N──▶ subscription ◀──N:1── topic   │
 ```
 source        (id, name, type[RSS|API], url, lang, category,
                trust_score, active, last_crawled_at)
+              -- trust_score는 M1-4 영속 어댑터 범위에서 제외 — 도메인·엔티티 미구현,
+              -- M2 스코어링 구현 시 도메인과 함께 추가 재검토 (D-022 비고)
 
 article       (id, source_id FK, url, normalized_url, title, body, lang,
                published_at, category, dedup_cluster_id, created_at)
