@@ -76,6 +76,27 @@ class CrawlSourcesServiceTest {
     }
 
     @Test
+    void crawlAllAggregatesMarkCrawledFailuresAndStillProcessesOtherSources() {
+        Source broken = activeSource(1L, "Broken");
+        Source healthy = activeSource(2L, "Healthy");
+        loadActiveSourcesPort.addAll(broken, healthy);
+        fetchFeedPort.willReturn(1L, List.of(rawArticle("https://broken.example.com/1")));
+        fetchFeedPort.willReturn(2L, List.of(rawArticle("https://healthy.example.com/1")));
+        updateSourcePort.willThrow(1L, new RuntimeException("markCrawled 실패"));
+
+        assertThatThrownBy(service::crawlAll)
+                .isInstanceOf(SourceException.class)
+                .hasMessageContaining("1");
+
+        assertThat(saveArticlePort.savedArticles())
+                .extracting(Article::getUrl)
+                .containsExactlyInAnyOrder("https://broken.example.com/1", "https://healthy.example.com/1");
+        assertThat(healthy.getLastCrawledAt()).isEqualTo(FIXED_NOW);
+        assertThat(updateSourcePort.markedCrawledAt(1L)).isNull();
+        assertThat(updateSourcePort.markedCrawledAt(2L)).isEqualTo(FIXED_NOW);
+    }
+
+    @Test
     void crawlBySourceIdCrawlsOnlyThatSource() {
         Source target = activeSource(1L, "Target");
         Source other = activeSource(2L, "Other");
@@ -163,13 +184,22 @@ class CrawlSourcesServiceTest {
 
     private static class FakeUpdateSourcePort implements UpdateSourcePort {
         private final Map<Long, Instant> markedAt = new HashMap<>();
+        private final Map<Long, RuntimeException> failuresBySourceId = new HashMap<>();
 
         Instant markedCrawledAt(Long sourceId) {
             return markedAt.get(sourceId);
         }
 
+        void willThrow(Long sourceId, RuntimeException exception) {
+            failuresBySourceId.put(sourceId, exception);
+        }
+
         @Override
         public void markCrawled(Long sourceId, Instant at) {
+            RuntimeException failure = failuresBySourceId.get(sourceId);
+            if (failure != null) {
+                throw failure;
+            }
             markedAt.put(sourceId, at);
         }
     }

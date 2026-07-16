@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -27,7 +28,18 @@ public class CrawlSourcesService implements CrawlSourcesUseCase {
 
     @Override
     public void crawlAll() {
-        loadActiveSourcesPort.loadActive().forEach(this::crawlSource);
+        List<Long> failedSourceIds = new ArrayList<>();
+        for (Source source : loadActiveSourcesPort.loadActive()) {
+            try {
+                crawlSource(source);
+            } catch (Exception e) {
+                log.error("소스 크롤링 상태 갱신 실패: sourceId={}, name={}", source.getSourceId(), source.getName(), e);
+                failedSourceIds.add(source.getSourceId());
+            }
+        }
+        if (!failedSourceIds.isEmpty()) {
+            throw new SourceException("크롤링 상태 갱신 실패: sourceId=" + failedSourceIds);
+        }
     }
 
     @Override
@@ -41,16 +53,18 @@ public class CrawlSourcesService implements CrawlSourcesUseCase {
     }
 
     private void crawlSource(Source source) {
+        List<Article> articles;
         try {
-            List<Article> articles = fetchFeedPort.fetch(source).stream()
+            articles = fetchFeedPort.fetch(source).stream()
                     .map(raw -> Article.create(raw, source.getSourceId()))
                     .toList();
             saveArticlePort.saveNew(articles);
-            Instant now = clock.instant();
-            source.markCrawled(now);
-            updateSourcePort.markCrawled(source.getSourceId(), now);
         } catch (Exception e) {
             log.warn("소스 크롤링 실패: sourceId={}, name={}", source.getSourceId(), source.getName(), e);
+            return;
         }
+        Instant now = clock.instant();
+        source.markCrawled(now);
+        updateSourcePort.markCrawled(source.getSourceId(), now);
     }
 }
