@@ -36,6 +36,9 @@ dependencies {
     // database driver
     runtimeOnly 'org.postgresql:postgresql'
 
+    // rss parsing
+    implementation 'com.rometools:rome:2.1.0'
+
     // lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
