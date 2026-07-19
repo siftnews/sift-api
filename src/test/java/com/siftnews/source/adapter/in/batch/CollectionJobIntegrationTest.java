@@ -26,9 +26,11 @@ import org.springframework.context.annotation.Primary;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -47,11 +49,15 @@ class CollectionJobIntegrationTest extends AbstractIntegrationTest {
     private FakeSaveArticlePort saveArticlePort;
 
     @Autowired
+    private FakeFetchFeedPort fetchFeedPort;
+
+    @Autowired
     private MeterRegistry meterRegistry;
 
     @BeforeEach
     void reset() {
         saveArticlePort.clear();
+        fetchFeedPort.clearFailures();
     }
 
     @Test
@@ -71,6 +77,24 @@ class CollectionJobIntegrationTest extends AbstractIntegrationTest {
                         "https://hn.example.com/1",
                         "https://hn.example.com/2",
                         "https://blog.example.com/1");
+    }
+
+    @Test
+    void skipsFailingSourceAndStillCompletesJob() throws Exception {
+        fetchFeedPort.willThrow(2L); // 소스 2가 fetch 중 예외 → 소스 1만 살아남아야 한다
+
+        JobExecution jobExecution = jobLauncherTestUtils.launchJob();
+
+        // 한 소스의 오류가 Job 전체를 실패시키지 않고 해당 소스만 skip 격리된다
+        assertThat(jobExecution.getStatus()).isEqualTo(BatchStatus.COMPLETED);
+
+        StepExecution stepExecution = jobExecution.getStepExecutions().iterator().next();
+        assertThat(stepExecution.getSkipCount()).isEqualTo(1);
+        assertThat(saveArticlePort.savedArticles())
+                .extracting(Article::getUrl)
+                .containsExactlyInAnyOrder(
+                        "https://hn.example.com/1",
+                        "https://hn.example.com/2");
     }
 
     @Test
@@ -96,7 +120,7 @@ class CollectionJobIntegrationTest extends AbstractIntegrationTest {
 
         @Bean
         @Primary
-        FetchFeedPort fakeFetchFeedPort() {
+        FakeFetchFeedPort fakeFetchFeedPort() {
             FakeFetchFeedPort port = new FakeFetchFeedPort();
             port.willReturn(1L, List.of(rawArticle("https://hn.example.com/1"), rawArticle("https://hn.example.com/2")));
             port.willReturn(2L, List.of(rawArticle("https://blog.example.com/1")));
@@ -138,13 +162,26 @@ class CollectionJobIntegrationTest extends AbstractIntegrationTest {
 
     static class FakeFetchFeedPort implements FetchFeedPort {
         private final Map<Long, List<RawArticle>> bySourceId = new HashMap<>();
+        private final Set<Long> failingSourceIds = new HashSet<>();
 
         void willReturn(Long sourceId, List<RawArticle> articles) {
             bySourceId.put(sourceId, articles);
         }
 
+        /** 해당 소스 fetch 시 예외를 던지게 한다(내결함성 검증용). */
+        void willThrow(Long sourceId) {
+            failingSourceIds.add(sourceId);
+        }
+
+        void clearFailures() {
+            failingSourceIds.clear();
+        }
+
         @Override
         public List<RawArticle> fetch(Source source) {
+            if (failingSourceIds.contains(source.getSourceId())) {
+                throw new IllegalStateException("fetch 실패(테스트): sourceId=" + source.getSourceId());
+            }
             return bySourceId.getOrDefault(source.getSourceId(), List.of());
         }
     }
@@ -162,8 +199,15 @@ class CollectionJobIntegrationTest extends AbstractIntegrationTest {
 
         @Override
         public int saveNew(List<Article> articles) {
-            saved.addAll(articles);
-            return articles.size();
+            // 실제 UNIQUE(normalized_url) 중복 무시를 모사 — skip 재처리 시 중복 저장 방지
+            int before = saved.size();
+            for (Article article : articles) {
+                boolean exists = saved.stream().anyMatch(s -> s.getUrl().equals(article.getUrl()));
+                if (!exists) {
+                    saved.add(article);
+                }
+            }
+            return saved.size() - before;
         }
     }
 }

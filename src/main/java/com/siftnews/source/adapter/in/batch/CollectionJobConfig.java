@@ -30,6 +30,13 @@ class CollectionJobConfig {
     /** 아이템 = 소스 하나이므로 chunk 50 = 소스 50개 단위 트랜잭션. */
     private static final int CHUNK_SIZE = 50;
 
+    /**
+     * 소스별 오류 격리 한계 — 한 소스의 fetch/변환 실패가 전체 수집 Job을 실패시키지 않도록
+     * skip으로 넘긴다. 이 수를 넘는 대량 실패는 계통 장애로 보고 step을 실패시켜 가시화한다.
+     * (TRANSIENT/PERMANENT 분류·재시도 백오프는 후속 — 소스 재시도 상태 스키마 필요)
+     */
+    private static final int SKIP_LIMIT = 100;
+
     @Bean
     Job collectionJob(JobRepository jobRepository, Step collectStep, CollectionMetricsListener metricsListener) {
         return new JobBuilder("collectionJob", jobRepository)
@@ -46,12 +53,19 @@ class CollectionJobConfig {
             SourceToArticlesProcessor sourceToArticlesProcessor,
             ArticleChunkWriter articleChunkWriter,
             CollectionMetricsListener metricsListener) {
+        // TODO(#14 후속): 배치가 3개 out-port에 직접 배선되어 오케스트레이션이 CrawlSourcesService와
+        //  이원화됨(MVP-DESIGN §3① 의도적 결정). 크롤링 정책이 늘면 UseCase(application.service)로
+        //  오케스트레이션 이관 검토 — chunk 모델상 item 단위 reader/processor/writer는 유지.
         return new StepBuilder("collectStep", jobRepository)
                 .<Source, List<Article>>chunk(CHUNK_SIZE, transactionManager)
                 .reader(activeSourceItemReader)
                 .processor(sourceToArticlesProcessor)
                 .writer(articleChunkWriter)
                 .listener(metricsListener)
+                // 소스별 오류 격리: 한 소스 실패가 전체 Job을 죽이지 않도록 skip (비배치 CrawlSourcesService와 동일 회복력)
+                .faultTolerant()
+                .skip(Exception.class)
+                .skipLimit(SKIP_LIMIT)
                 .build();
     }
 
