@@ -1,0 +1,169 @@
+package com.siftnews.source.adapter.in.batch;
+
+import com.siftnews.source.application.port.out.FetchFeedPort;
+import com.siftnews.source.application.port.out.LoadActiveSourcesPort;
+import com.siftnews.source.application.port.out.SaveArticlePort;
+import com.siftnews.source.domain.Article;
+import com.siftnews.source.domain.Category;
+import com.siftnews.source.domain.RawArticle;
+import com.siftnews.source.domain.Source;
+import com.siftnews.source.domain.SourceType;
+import com.siftnews.support.AbstractIntegrationTest;
+import io.micrometer.core.instrument.MeterRegistry;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.batch.core.BatchStatus;
+import org.springframework.batch.core.ExitStatus;
+import org.springframework.batch.core.JobExecution;
+import org.springframework.batch.core.StepExecution;
+import org.springframework.batch.test.JobLauncherTestUtils;
+import org.springframework.batch.test.context.SpringBatchTest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+/**
+ * collectionJob 조립 통합 테스트 — {@code @SpringBatchTest}로 Job을 실제 기동한다.
+ * out-port는 {@code @Primary} fake로 오버라이드해 RSS 네트워크/DB 적재 없이 배선만 검증한다.
+ * (JobRepository 메타테이블은 Testcontainers Postgres 위에서 동작)
+ */
+@SpringBatchTest
+class CollectionJobIntegrationTest extends AbstractIntegrationTest {
+
+    @Autowired
+    private JobLauncherTestUtils jobLauncherTestUtils;
+
+    @Autowired
+    private FakeSaveArticlePort saveArticlePort;
+
+    @Autowired
+    private MeterRegistry meterRegistry;
+
+    @BeforeEach
+    void reset() {
+        saveArticlePort.clear();
+    }
+
+    @Test
+    void runsCollectStepAndSavesArticlesFromAllActiveSources() throws Exception {
+        JobExecution jobExecution = jobLauncherTestUtils.launchJob();
+
+        assertThat(jobExecution.getExitStatus()).isEqualTo(ExitStatus.COMPLETED);
+        assertThat(jobExecution.getStatus()).isEqualTo(BatchStatus.COMPLETED);
+
+        StepExecution stepExecution = jobExecution.getStepExecutions().iterator().next();
+        assertThat(stepExecution.getStepName()).isEqualTo("collectStep");
+        assertThat(stepExecution.getReadCount()).isEqualTo(2); // 활성 소스 2건
+
+        assertThat(saveArticlePort.savedArticles())
+                .extracting(Article::getUrl)
+                .containsExactlyInAnyOrder(
+                        "https://hn.example.com/1",
+                        "https://hn.example.com/2",
+                        "https://blog.example.com/1");
+    }
+
+    @Test
+    void publishesBatchMetricsToMicrometerRegistry() throws Exception {
+        jobLauncherTestUtils.launchJob();
+
+        // Spring Batch 5는 job/step 소요시간을 Observation API로 기록하고, 부트가 이를
+        // MeterRegistry에 바인딩한다. 액추에이터가 이 레지스트리를 /actuator/metrics 로 노출한다.
+        assertThat(meterRegistry.find("spring.batch.job").timer()).isNotNull();
+        assertThat(meterRegistry.find("spring.batch.step").timer()).isNotNull();
+    }
+
+    @TestConfiguration
+    static class FakePortsConfig {
+
+        @Bean
+        @Primary
+        LoadActiveSourcesPort fakeLoadActiveSourcesPort() {
+            return new FakeLoadActiveSourcesPort(
+                    activeSource(1L, "Hacker News"),
+                    activeSource(2L, "Tech Blog"));
+        }
+
+        @Bean
+        @Primary
+        FetchFeedPort fakeFetchFeedPort() {
+            FakeFetchFeedPort port = new FakeFetchFeedPort();
+            port.willReturn(1L, List.of(rawArticle("https://hn.example.com/1"), rawArticle("https://hn.example.com/2")));
+            port.willReturn(2L, List.of(rawArticle("https://blog.example.com/1")));
+            return port;
+        }
+
+        @Bean
+        @Primary
+        FakeSaveArticlePort fakeSaveArticlePort() {
+            return new FakeSaveArticlePort();
+        }
+    }
+
+    private static Source activeSource(Long id, String name) {
+        return Source.restore(id, name, SourceType.RSS, "https://example.com/rss", "en", Category.DEV, true, null);
+    }
+
+    private static RawArticle rawArticle(String url) {
+        return new RawArticle(url, "제목", "본문", "en", Instant.parse("2026-07-10T00:00:00Z"), Category.DEV);
+    }
+
+    static class FakeLoadActiveSourcesPort implements LoadActiveSourcesPort {
+        private final List<Source> sources;
+
+        FakeLoadActiveSourcesPort(Source... sources) {
+            this.sources = List.of(sources);
+        }
+
+        @Override
+        public List<Source> loadActive() {
+            return sources;
+        }
+
+        @Override
+        public Optional<Source> findActiveById(Long sourceId) {
+            return sources.stream().filter(s -> s.getSourceId().equals(sourceId)).findFirst();
+        }
+    }
+
+    static class FakeFetchFeedPort implements FetchFeedPort {
+        private final Map<Long, List<RawArticle>> bySourceId = new HashMap<>();
+
+        void willReturn(Long sourceId, List<RawArticle> articles) {
+            bySourceId.put(sourceId, articles);
+        }
+
+        @Override
+        public List<RawArticle> fetch(Source source) {
+            return bySourceId.getOrDefault(source.getSourceId(), List.of());
+        }
+    }
+
+    static class FakeSaveArticlePort implements SaveArticlePort {
+        private final List<Article> saved = new ArrayList<>();
+
+        List<Article> savedArticles() {
+            return saved;
+        }
+
+        void clear() {
+            saved.clear();
+        }
+
+        @Override
+        public int saveNew(List<Article> articles) {
+            saved.addAll(articles);
+            return articles.size();
+        }
+    }
+}
