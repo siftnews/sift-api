@@ -29,6 +29,11 @@ class CollectionMetricsListener implements StepExecutionListener, JobExecutionLi
                 stepExecution.getStepName(), reads, writes,
                 stepExecution.getFilterCount(), stepExecution.getSkipCount(),
                 elapsed.toMillis(), String.format("%.2f", throughput));
+        // Step 실패 시 원인 예외를 함께 남긴다 — 카운트만으론 실패 원인을 추적할 수 없다.
+        if (!stepExecution.getFailureExceptions().isEmpty()) {
+            log.warn("[measure] step={} 실패 원인={}", stepExecution.getStepName(),
+                    stepExecution.getFailureExceptions().get(0).toString());
+        }
         return stepExecution.getExitStatus();
     }
 
