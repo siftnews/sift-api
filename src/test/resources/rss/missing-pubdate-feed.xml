@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+    <channel>
+        <title>Missing PubDate Test Feed</title>
+        <link>https://example.com</link>
+        <description>RSS feed with a missing pubDate item</description>
+        <item>
+            <title>No PubDate Article</title>
+            <link>https://example.com/articles/no-pubdate</link>
+            <description>Body without a pubDate.</description>
+        </item>
+        <item>
+            <title>With PubDate Article</title>
+            <link>https://example.com/articles/with-pubdate</link>
+            <description>Body with a pubDate.</description>
+            <pubDate>Wed, 15 Jul 2026 10:00:00 GMT</pubDate>
+        </item>
+    </channel>
+</rss>

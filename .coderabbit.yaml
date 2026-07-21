@@ -31,8 +31,8 @@ reviews:
         모든 피드백은 Comment로만 남기고, 개선 방향을 함께 제안하십시오.
 
         [모듈 = 바운디드 컨텍스트 책임 범위]
-        - source: RSS/API 외부 소스 등록·크롤링·정규화
-        - content: 기사 저장, 토픽별 선별(스코어링·랭킹), 이슈 구성
+        - source: RSS/API 외부 소스 등록·크롤링·정규화, 기사(Article) 저장·소유 (D-018)
+        - content: 토픽별 선별(스코어링·랭킹), 이슈 구성 — 후보 기사는 Source의 named interface 경유로 조회만 (D-018)
         - subscriber: 구독/해지, 토픽 구독, 수신 동의, 바운스·옵트아웃
         - delivery: 발송 스냅샷(delivery_job/delivery_task), 대량 발송, 재시도 — 성능 핵심
         - tracking: 오픈/클릭/바운스 이벤트 수집·집계
