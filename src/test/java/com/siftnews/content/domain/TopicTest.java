@@ -2,6 +2,8 @@ package com.siftnews.content.domain;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -82,6 +84,36 @@ class TopicTest {
     void createRejectsNegativeScoreThreshold() {
         assertThatThrownBy(() -> Topic.create("이름", "dev", "ko",
                 null, null, null, null, 24, 10, -0.1, true))
+                .isInstanceOf(TopicException.class);
+    }
+
+    @Test
+    void createRejectsNonFiniteScoreThreshold() {
+        assertThatThrownBy(() -> Topic.create("이름", "dev", "ko",
+                null, null, null, null, 24, 10, Double.NaN, true))
+                .isInstanceOf(TopicException.class);
+        assertThatThrownBy(() -> Topic.create("이름", "dev", "ko",
+                null, null, null, null, 24, 10, Double.POSITIVE_INFINITY, true))
+                .isInstanceOf(TopicException.class);
+    }
+
+    @Test
+    void createRejectsNullCollectionElements() {
+        List<String> withNullElement = new ArrayList<>();
+        withNullElement.add(null);
+
+        assertThatThrownBy(() -> Topic.create("이름", "dev", "ko",
+                withNullElement, null, null, null, 24, 10, 0.0, true))
+                .isInstanceOf(TopicException.class);
+    }
+
+    @Test
+    void createRejectsNullKeywordWeightValue() {
+        Map<String, Double> withNullValue = new HashMap<>();
+        withNullValue.put("Spring", null);
+
+        assertThatThrownBy(() -> Topic.create("이름", "dev", "ko",
+                null, null, withNullValue, null, 24, 10, 0.0, true))
                 .isInstanceOf(TopicException.class);
     }
 }

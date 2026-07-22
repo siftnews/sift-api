@@ -3,7 +3,9 @@ package com.siftnews.content.domain;
 import lombok.Getter;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * 선별 기준 애그리거트 — 구독자가 고르는 관심 토픽(dev/ai/econ 등).
@@ -65,8 +67,8 @@ public class Topic {
         if (maxItems <= 0) {
             throw new TopicException("maxItems는 0보다 커야 합니다: " + maxItems);
         }
-        if (scoreThreshold < 0) {
-            throw new TopicException("scoreThreshold는 음수일 수 없습니다: " + scoreThreshold);
+        if (!Double.isFinite(scoreThreshold) || scoreThreshold < 0) {
+            throw new TopicException("scoreThreshold는 0 이상의 유한값이어야 합니다: " + scoreThreshold);
         }
         return new Topic(null, name.strip(), normalizedSlug, langScope,
                 copyOrEmpty(includeKeywords), copyOrEmpty(excludeKeywords),
@@ -91,7 +93,7 @@ public class Topic {
         if (slug == null || slug.isBlank()) {
             throw new TopicException("토픽 slug는 비어 있을 수 없습니다.");
         }
-        String normalized = slug.strip().toLowerCase();
+        String normalized = slug.strip().toLowerCase(Locale.ROOT);
         if (!normalized.matches("[a-z0-9-]+")) {
             throw new TopicException("토픽 slug는 소문자·숫자·하이픈만 허용합니다: " + slug);
         }
@@ -99,10 +101,23 @@ public class Topic {
     }
 
     private static List<String> copyOrEmpty(List<String> values) {
-        return values == null ? List.of() : List.copyOf(values);
+        if (values == null) {
+            return List.of();
+        }
+        if (values.stream().anyMatch(Objects::isNull)) {
+            throw new TopicException("컬렉션 요소는 null일 수 없습니다.");
+        }
+        return List.copyOf(values);
     }
 
     private static Map<String, Double> copyOrEmpty(Map<String, Double> values) {
-        return values == null ? Map.of() : Map.copyOf(values);
+        if (values == null) {
+            return Map.of();
+        }
+        if (values.keySet().stream().anyMatch(Objects::isNull)
+                || values.values().stream().anyMatch(Objects::isNull)) {
+            throw new TopicException("맵의 키·값은 null일 수 없습니다.");
+        }
+        return Map.copyOf(values);
     }
 }
