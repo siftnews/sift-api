@@ -58,7 +58,7 @@ Subscription { subscriberId, topicId, status[ACTIVE|PAUSED] }
 
 ### 2) Dedup — 중복 제거 (전역 1회)
 - 1차 키: `normalizedUrl` 완전 일치
-- 2차: 제목 유사도 — **SimHash** 또는 토큰 **Jaccard** ≥ 임계값
+- 2차: 제목 유사도 — 토큰 **Jaccard ≥ 임계값**(MVP 기본 0.7, D-030). SimHash는 대규모 전환 시 재검토
 - 같은 사건을 보도한 기사들을 하나의 **클러스터**로 묶음 → `dedupClusterId`
   - 대표 기사 1건 선정(최신 또는 신뢰도 높은 소스)
   - **클러스터 크기 = 화제성 신호** (4단계 trendScore 입력)
@@ -110,7 +110,7 @@ issue_item    (id, issue_id, article_id, rank, score)
 ```
 
 > `article`은 수집 배치가 채우고(**Source 소유, D-018** — Content는 named interface로 조회), `article_score`/`issue`/`issue_item`은 가공(선별) 배치가 채운다.
-> ⚠️ `dedup_cluster_id` 갱신은 Content가 Source 소유 데이터를 쓰는 지점 — 해소 방안은 M2 Dedup 이슈에서 결정 (D-018 비고).
+> `dedup_cluster_id` 갱신은 **Source가 named interface에 노출하는 갱신 오퍼레이션**을 Content가 호출해 수행한다 (D-030 — D-018 꼬리 해소). 후보 조회도 Source named interface 경유.
 > 이후 발송 배치가 `issue` → 토픽 구독자 → `delivery_task` 스냅샷을 만든다 ([PLAN.md](https://github.com/siftnews/sift-docs/blob/main/PLAN.md) 5장).
 
 ---
