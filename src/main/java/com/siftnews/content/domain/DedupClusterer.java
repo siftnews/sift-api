@@ -12,7 +12,12 @@ import java.util.Map;
  * <p>
  * 병합 기준: ① {@code normalizedUrl} 완전 일치 ② 제목 Jaccard ≥ 임계값.
  * union-find로 전이적 병합(A~B, B~C면 A~C 한 클러스터)한다. 대표는 최신 발행분,
- * 동률이면 작은 articleId. MVP는 O(n²) 비교 — normalized_url 1차 컷 후 소규모라 충분.
+ * 동률이면 작은 articleId. MVP는 O(n²) 비교 — 후보가 소규모라 충분.
+ * <p>
+ * 실제 교차 소스 dedup은 ②(제목 Jaccard)가 담당한다. 저장 시점에
+ * {@code UNIQUE(normalized_url)}로 같은 정규화 URL은 한 행만 남으므로(D-018),
+ * 후보 집합에서 ①이 서로 다른 두 기사를 병합하는 일은 사실상 없다 — ①은
+ * 순수 도메인 함수로서의 방어적 가드다(입력이 같은 URL이면 병합).
  */
 public final class DedupClusterer {
 

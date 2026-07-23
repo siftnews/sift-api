@@ -25,7 +25,7 @@ class NormalizeDedupServiceTest {
     void dropsCutArticlesAndAssignsClustersToSurvivors() {
         List<CandidateArticle> candidates = List.of(
                 article(1L, "https://ex.com/a", "Spring Boot 3 released", "en", LONG_BODY),
-                article(2L, "https://ex.com/a", "무관 제목이지만 같은 URL", "en", LONG_BODY),   // a1과 같은 URL → 병합
+                article(2L, "https://ex.com/a", "무관 제목이지만 같은 URL", "en", LONG_BODY),   // sameUrl 방어 가드 검증(운영은 UNIQUE(normalized_url)로 이 경우 없음)
                 article(3L, "https://b.com/y", "Bitcoin price surges", "en", LONG_BODY),      // 독립 클러스터
                 article(4L, "https://c.com/z", "짧은 본문", "en", "너무 짧음"),                  // 본문 짧아 drop
                 article(5L, "https://d.com/w", "unsupported language", "fr", LONG_BODY));      // 언어 drop
