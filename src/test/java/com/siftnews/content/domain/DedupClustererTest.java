@@ -55,11 +55,47 @@ class DedupClustererTest {
 
         assertThat(clusters).hasSize(1);
         assertThat(clusters.get(0).representativeId()).isEqualTo(2L);
-        assertThat(clusters.get(0).clusterId()).isEqualTo("c-2");
+        assertThat(clusters.get(0).clusterId()).isEqualTo("c-1");
     }
 
     @Test
     void emptyInputYieldsNoClusters() {
         assertThat(DedupClusterer.cluster(List.of(), THRESHOLD)).isEmpty();
+    }
+
+    @Test
+    void clusterIdStaysStableWhenNewerArticleJoins() {
+        List<ArticleCluster> firstRun = DedupClusterer.cluster(List.of(
+                article(1L, "https://ex.com/a", "같은 사건 보도", Instant.parse("2026-07-20T00:00:00Z")),
+                article(2L, "https://ex.com/a", "같은 사건 보도", Instant.parse("2026-07-21T00:00:00Z"))
+        ), THRESHOLD);
+        String firstClusterId = firstRun.get(0).clusterId();
+
+        // 더 최신 publishedAt + 더 큰 articleId를 가진 기사(3L)가 재실행 시 합류한다.
+        List<ArticleCluster> secondRun = DedupClusterer.cluster(List.of(
+                article(1L, "https://ex.com/a", "같은 사건 보도", Instant.parse("2026-07-20T00:00:00Z")),
+                article(2L, "https://ex.com/a", "같은 사건 보도", Instant.parse("2026-07-21T00:00:00Z")),
+                article(3L, "https://ex.com/a", "같은 사건 보도", Instant.parse("2026-07-22T00:00:00Z"))
+        ), THRESHOLD);
+
+        assertThat(secondRun).hasSize(1);
+        // clusterId는 재실행에 안정적으로 유지되지만, 대표는 최신 기사로 바뀐다 — id 발급 기준과 대표 선정을 분리.
+        assertThat(secondRun.get(0).clusterId()).isEqualTo(firstClusterId);
+        assertThat(secondRun.get(0).representativeId()).isEqualTo(3L);
+    }
+
+    @Test
+    void clusterIdIsDerivedFromMinMemberId() {
+        // min 멤버(3L)와 대표(최신 발행 9L)가 서로 다른 기사가 되도록 배치 —
+        // 구 코드("c-" + representative.articleId())였다면 "c-9"가 나와 이 테스트가 실패한다.
+        List<ArticleCluster> clusters = DedupClusterer.cluster(List.of(
+                article(5L, "https://ex.com/a", "같은 사건 보도", Instant.parse("2026-07-20T00:00:00Z")),
+                article(3L, "https://ex.com/a", "같은 사건 보도", Instant.parse("2026-07-19T00:00:00Z")),
+                article(9L, "https://ex.com/a", "같은 사건 보도", Instant.parse("2026-07-23T00:00:00Z"))
+        ), THRESHOLD);
+
+        assertThat(clusters).hasSize(1);
+        assertThat(clusters.get(0).clusterId()).isEqualTo("c-3");
+        assertThat(clusters.get(0).representativeId()).isEqualTo(9L);
     }
 }

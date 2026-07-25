@@ -14,6 +14,14 @@ import java.util.Map;
  * union-find로 전이적 병합(A~B, B~C면 A~C 한 클러스터)한다. 대표는 최신 발행분,
  * 동률이면 작은 articleId. MVP는 O(n²) 비교 — 후보가 소규모라 충분.
  * <p>
+ * {@code clusterId}는 대표 선정과 분리된 별도 기준으로 발급한다(D-031) —
+ * 최소 memberId에서 파생. 신규 기사는 id가 단조 증가하는 한 기존보다 큰
+ * articleId를 받으므로, 기존 클러스터에 합류해도(대표가 바뀌더라도) 멤버
+ * 구성이 유지되는 한 clusterId는 재실행에 안정적이다. 다만 최소 멤버가
+ * 윈도우 밖으로 이탈하거나 정규화 컷에 탈락해 후보에서 빠지면 다음 최소
+ * id로 바뀌며, 두 클러스터가 신규 기사로 연결되어 병합되는 경우도 클러스터
+ * 정체성 자체가 달라진 것이라 clusterId 변경을 수용한다.
+ * <p>
  * 실제 교차 소스 dedup은 ②(제목 Jaccard)가 담당한다. 저장 시점에
  * {@code UNIQUE(normalized_url)}로 같은 정규화 URL은 한 행만 남으므로(D-018),
  * 후보 집합에서 ①이 서로 다른 두 기사를 병합하는 일은 사실상 없다 — ①은
@@ -47,7 +55,8 @@ public final class DedupClusterer {
         for (List<Integer> indexes : groups.values()) {
             CandidateArticle representative = representative(articles, indexes);
             List<Long> memberIds = indexes.stream().map(idx -> articles.get(idx).articleId()).toList();
-            clusters.add(new ArticleCluster("c-" + representative.articleId(), representative.articleId(), memberIds));
+            long minMemberId = memberIds.stream().mapToLong(Long::longValue).min().orElseThrow();
+            clusters.add(new ArticleCluster("c-" + minMemberId, representative.articleId(), memberIds));
         }
         return clusters;
     }

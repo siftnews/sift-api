@@ -1,5 +1,7 @@
 package com.siftnews.content.domain;
 
+import com.siftnews.common.BusinessException;
+
 import java.time.Instant;
 
 /**
@@ -16,4 +18,10 @@ public record CandidateArticle(
         String lang,
         String body,
         Instant publishedAt) {
+
+    public CandidateArticle {
+        if (articleId == null) {
+            throw new BusinessException("후보 기사 articleId는 null일 수 없습니다.");
+        }
+    }
 }
