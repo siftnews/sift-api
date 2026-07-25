@@ -1,7 +1,8 @@
 package com.siftnews.content.domain;
 
+import com.siftnews.common.BusinessException;
+
 import java.time.Instant;
-import java.util.Objects;
 
 /**
  * 선별 파이프라인이 다루는 후보 기사 뷰 — Source가 소유하는 Article(D-018)을
@@ -19,6 +20,8 @@ public record CandidateArticle(
         Instant publishedAt) {
 
     public CandidateArticle {
-        Objects.requireNonNull(articleId, "articleId는 필수다");
+        if (articleId == null) {
+            throw new BusinessException("후보 기사 articleId는 null일 수 없습니다.");
+        }
     }
 }

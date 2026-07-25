@@ -1,18 +1,19 @@
 package com.siftnews.content.domain;
 
+import com.siftnews.common.BusinessException;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatNullPointerException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class CandidateArticleTest {
 
     @Test
     void articleIdIsRequired() {
-        assertThatNullPointerException()
-                .isThrownBy(() -> new CandidateArticle(null, "https://ex.com/a", "제목", "en", "body", Instant.now()));
+        assertThatThrownBy(() -> new CandidateArticle(null, "https://ex.com/a", "제목", "en", "body", Instant.now()))
+                .isInstanceOf(BusinessException.class);
     }
 
     @Test
