@@ -14,7 +14,7 @@ reviews:
 
   path_filters:
     - "!**/build/**"
-    - "!**/out/**"
+    - "!out/**"          # IntelliJ 빌드 산출물만 — `**/out/**`는 헥사고날 port/out·adapter/out까지 제외시킨다
     - "!**/.gradle/**"
     - "!**/generated/**"
     - "!**/*.md"
