@@ -120,12 +120,19 @@ Step collectStep (chunk = 50)
 
 ### ③ selectionJob — 선별 (토픽별, 트리거로 기동)
 ```
-Step normalizeDedupStep         최근 후보 기사 정규화 검증 + dedup_cluster_id 부여
+Step normalizeDedupStep         [from, to) 윈도우 후보 전체 재계산 + dedup_cluster_id 교체
 Step scoreStep    (chunk)       토픽 키워드/최신성/화제성/신뢰도 → article_score 저장
 Step selectStep                 threshold·랭킹·다양성 → issue(DRAFT→SCHEDULED) + issue_item
   → in: BuildIssueUseCase.buildIssueForTopic(topicId)
 ```
 > MVP는 토픽 단일 처리. 성능 V3에서 토픽 파티셔닝으로 전환.
+>
+> ⚠️ **윈도우 불변식 (D-031 — M2-5 배선 시 반드시 지킬 것).** `normalizeDedupStep`은 토픽 독립 전역 단계인데 selectionJob은 토픽마다 기동되므로(위 ②), 다음 3가지가 깨지면 클러스터가 분열돼 조용히 틀린 결과가 나온다.
+> 1. `dedup_cluster_id`는 **그 기사를 마지막으로 포함한 실행의 윈도우 기준 결과**다 — 윈도우가 다른 값끼리는 비교·집계할 수 없다.
+> 2. **scoreStep·selectStep의 대상 집합은 직전 `normalizeDedupStep` 윈도우의 부분집합**이어야 한다. 넓히면 윈도우 밖으로 밀려난 기사가 옛 clusterId를 유지한 채 남아, 같은 사건이 서로 다른 클러스터로 보인다 → trendScore 과소 계산 + 다양성(MMR) 페널티 미적용으로 같은 사건 기사가 한 이슈에 중복 게재된다.
+> 3. **한 runDate의 모든 selectionJob 실행은 동일한 `[from, to)`를 공유**해야 한다 — 토픽별로 다르게 잡으면 나중 토픽이 앞선 토픽의 스코어링 전제를 덮어쓴다.
+>
+> 윈도우 기준 컬럼은 **`article.created_at`(수집 시각)** — `published_at`은 nullable이라 조회 누락이 생기고, 뒤늦게 수집된 과거 기사가 영영 클러스터링되지 않는다. (대표 선정은 별개로 `published_at` 기준 유지.)
 
 ### ④ dispatchJob — 발송 스냅샷 + 전송 (@Scheduled 매시 정각 — D-019 pull 스캔)
 ```
@@ -169,12 +176,15 @@ out  UpdateSourcePort         markCrawled(sourceId, at)     // last_crawled_at �
 
 ### Content (선별)
 ```
+in   NormalizeDedupUseCase        normalizeAndDedup(from, to): NormalizeDedupSummary
 in   BuildIssueUseCase            buildIssueForTopic(topicId, runDate): IssueId
 out  LoadTopicPort                load(topicId): Topic
-out  LoadCandidateArticlesPort    loadCandidates(topic, since): List<Article>
+out  LoadCandidateArticlesPort    loadCandidates(from, to): List<CandidateArticle>  // 윈도우 전체 재계산 (D-031)
+out  UpdateArticleClusterPort     updateClusters(clusterIdsByArticleId)  // null 값 = 해제, 벌크 (D-031)
 out  SaveArticleScorePort         saveAll(scores)
 out  SaveIssuePort                save(issue, items): IssueId
 ```
+> `normalizeAndDedup`은 매 실행이 `[from, to)` 윈도우 내 후보 전체를 재계산해 실행 단위로 클러스터 상태를 통째로 교체한다 — 컷에서 탈락한 기사는 `null`로 해제되며, 이것이 재실행 멱등성의 전제다(D-031).
 
 ### Subscriber
 ```
