@@ -1,5 +1,6 @@
 package com.siftnews.source.adapter.out.rss;
 
+import com.rometools.rome.feed.synd.SyndContent;
 import com.rometools.rome.feed.synd.SyndEntry;
 import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.io.SyndFeedInput;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Component;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.List;
+import java.util.Objects;
 
 @Component
 class RssFeedAdapter implements FetchFeedPort {
@@ -38,10 +40,26 @@ class RssFeedAdapter implements FetchFeedPort {
         return new RawArticle(
                 entry.getLink(),
                 entry.getTitle(),
-                entry.getDescription().getValue(),
+                descriptionOf(entry),
                 source.getLang(),
                 entry.getPublishedDate() != null ? entry.getPublishedDate().toInstant() : null,
                 source.getCategory()
         );
+    }
+
+    /**
+     * {@code <description>}이 없는 피드가 있다 — 한국경제는 title·link·author·pubDate만 싣고,
+     * 토스는 일부 항목이 {@code <content:encoded>}만 갖는다. 방어가 없으면 NPE가 나면서
+     * <b>그 소스의 수집이 통째로 실패</b>한다(2026-07-26 e2e에서 9개 중 2개 소스가 이 경로로 누락).
+     */
+    private static String descriptionOf(SyndEntry entry) {
+        if (entry.getDescription() != null) {
+            return entry.getDescription().getValue();
+        }
+        return entry.getContents().stream()
+                .map(SyndContent::getValue)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
     }
 }
