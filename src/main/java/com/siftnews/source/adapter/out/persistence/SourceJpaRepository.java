@@ -10,4 +10,6 @@ interface SourceJpaRepository extends JpaRepository<SourceJpaEntity, Long> {
     List<SourceJpaEntity> findByActiveTrue();
 
     Optional<SourceJpaEntity> findByIdAndActiveTrue(Long id);
+
+    boolean existsByUrl(String url);
 }
