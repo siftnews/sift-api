@@ -29,8 +29,16 @@ class CollectionSkipListener implements SkipListener<Source, List<Article>> {
                 source.getName(), source.getSourceId(), source.getUrl(), t);
     }
 
+    /**
+     * 기사 url 대신 {@code sourceId}만 남긴다 — 어느 소스가 누락됐는지 식별하기에 충분하면서
+     * 로그 카디널리티가 소스 수로 제한된다(기사 단위로 남기면 chunk 크기만큼 불어난다).
+     */
     @Override
     public void onSkipInWrite(List<Article> articles, Throwable t) {
-        log.warn("collectStep 저장 skip: 기사 {}건", articles.size(), t);
+        List<Long> sourceIds = articles.stream()
+                .map(Article::getSourceId)
+                .distinct()
+                .toList();
+        log.warn("collectStep 저장 skip: 기사 {}건 sourceIds={}", articles.size(), sourceIds, t);
     }
 }

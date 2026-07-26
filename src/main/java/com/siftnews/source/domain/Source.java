@@ -74,7 +74,7 @@ public class Source {
         try {
             uri = URI.create(trimmed);
         } catch (IllegalArgumentException e) {
-            throw new SourceException("유효하지 않은 소스 url 형식입니다: " + url);
+            throw new SourceException("유효하지 않은 소스 url 형식입니다: " + url, e);
         }
 
         if (uri.getScheme() == null || uri.getHost() == null) {

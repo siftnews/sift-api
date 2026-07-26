@@ -27,7 +27,8 @@ class SourceJpaEntity extends BaseEntity {
     @Column(nullable = false)
     private SourceType type;
 
-    @Column(nullable = false)
+    /** 시더가 url 기준으로 멱등하므로, 동시 기동 시 중복이 조용히 들어가지 않도록 DB에서도 막는다. */
+    @Column(nullable = false, unique = true)
     private String url;
 
     @Column(nullable = false)
