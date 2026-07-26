@@ -52,7 +52,8 @@ class CollectionJobConfig {
             ActiveSourceItemReader activeSourceItemReader,
             SourceToArticlesProcessor sourceToArticlesProcessor,
             ArticleChunkWriter articleChunkWriter,
-            CollectionMetricsListener metricsListener) {
+            CollectionMetricsListener metricsListener,
+            CollectionSkipListener skipListener) {
         // TODO(#14 후속): 배치가 3개 out-port에 직접 배선되어 오케스트레이션이 CrawlSourcesService와
         //  이원화됨(MVP-DESIGN §3① 의도적 결정). 크롤링 정책이 늘면 UseCase(application.service)로
         //  오케스트레이션 이관 검토 — chunk 모델상 item 단위 reader/processor/writer는 유지.
@@ -66,6 +67,8 @@ class CollectionJobConfig {
                 .faultTolerant()
                 .skip(Exception.class)
                 .skipLimit(SKIP_LIMIT)
+                // skip은 예외를 삼키므로, 사유를 남기지 않으면 소스가 조용히 누락된다
+                .listener(skipListener)
                 .build();
     }
 
@@ -88,5 +91,10 @@ class CollectionJobConfig {
     @Bean
     CollectionMetricsListener collectionMetricsListener() {
         return new CollectionMetricsListener();
+    }
+
+    @Bean
+    CollectionSkipListener collectionSkipListener() {
+        return new CollectionSkipListener();
     }
 }
