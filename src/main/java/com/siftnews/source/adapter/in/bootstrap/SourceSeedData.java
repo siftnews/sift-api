@@ -1,4 +1,4 @@
-package com.siftnews.source.adapter.out.persistence;
+package com.siftnews.source.adapter.in.bootstrap;
 
 import com.siftnews.source.domain.Category;
 import com.siftnews.source.domain.Source;

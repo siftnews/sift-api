@@ -181,13 +181,16 @@ Step retryStep   (chunk = 500)
 ### Source
 ```
 in   CrawlSourcesUseCase      crawlAll() / crawl(sourceId)
+in   SeedSourcesUseCase       seed(sources): int            // 심을 카탈로그는 호출자가 결정 (PR #24 리뷰 반영)
 in   (named interface)        후보 기사 조회 — Content의 LoadCandidateArticlesPort가 경유 (D-018)
 out  LoadActiveSourcesPort    loadActive(): List<Source>
                               findActiveById(sourceId): Optional<Source>   // crawl(sourceId) 단일 조회 (PR #9 리뷰 반영)
 out  FetchFeedPort            fetch(source): List<RawArticle>
 out  SaveArticlePort          saveNew(articles): int        // 중복 무시
+out  SaveSourcePort           saveNew(sources): int         // url conflict-ignore, 동시 기동 멱등
 out  UpdateSourcePort         markCrawled(sourceId, at)     // last_crawled_at 영속 반영 (D-022)
 ```
+> **시더는 인바운드 어댑터** (`adapter.in.bootstrap.SourceSeeder`). 기동을 자극으로 받아 `SeedSourcesUseCase`를 호출할 뿐이고, 카탈로그(`SourceSeedData`)도 같은 인바운드에 둔다 — 저장은 `SaveSourcePort`로 내려간다. `content`의 `TopicSeeder`는 아직 out 어댑터에 남아 있다(후속).
 > **Article 애그리거트는 Source 소유 (D-018).** article 테이블 스키마·멱등(UNIQUE normalized_url)의 책임자는 Source. named interface 시그니처는 구현 이슈에서 확정.
 
 ### Content (선별)

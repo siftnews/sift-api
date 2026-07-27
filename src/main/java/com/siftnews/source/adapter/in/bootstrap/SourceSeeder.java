@@ -1,6 +1,7 @@
-package com.siftnews.source.adapter.out.persistence;
+package com.siftnews.source.adapter.in.bootstrap;
 
-import com.siftnews.source.domain.Source;
+import com.siftnews.source.application.port.in.SeedSourcesUseCase;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
@@ -9,7 +10,11 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /**
- * 기동 시 MVP 수집 소스 9종을 시드한다 — url 기준 멱등(이미 있으면 건너뜀).
+ * 기동 이벤트를 받아 MVP 수집 소스 9종을 심는 <b>인바운드 어댑터</b> — url 기준 멱등.
+ * <p>
+ * 배치 Job과 마찬가지로 기동이라는 외부 자극을 유스케이스로 옮길 뿐이라 저장 방법(JPA)은 알지
+ * 않는다. 심을 카탈로그는 {@link SourceSeedData}가 들고 있고, 저장은
+ * {@link SeedSourcesUseCase} → {@code SaveSourcePort} → persistence 어댑터로 흐른다.
  * <p>
  * {@code test} 프로파일에서는 동작하지 않는다({@code @Profile("!test")}) — 통합 테스트는
  * 자기 데이터를 직접 준비한다(CLAUDE.md). Liquibase 마이그레이션 전환은 후속(MVP-DESIGN §2).
@@ -22,25 +27,13 @@ import org.springframework.stereotype.Component;
 @Component
 @Profile("!test")
 @Order(Ordered.HIGHEST_PRECEDENCE)
+@RequiredArgsConstructor
 class SourceSeeder implements ApplicationRunner {
 
-    private final SourceJpaRepository sourceJpaRepository;
-
-    SourceSeeder(SourceJpaRepository sourceJpaRepository) {
-        this.sourceJpaRepository = sourceJpaRepository;
-    }
+    private final SeedSourcesUseCase seedSourcesUseCase;
 
     @Override
     public void run(ApplicationArguments args) {
-        for (Source source : SourceSeedData.sources()) {
-            if (!sourceJpaRepository.existsByUrl(source.getUrl())) {
-                sourceJpaRepository.save(toEntity(source));
-            }
-        }
-    }
-
-    private static SourceJpaEntity toEntity(Source source) {
-        return new SourceJpaEntity(source.getName(), source.getType(), source.getUrl(),
-                source.getLang(), source.getCategory(), source.isActive(), source.getLastCrawledAt());
+        seedSourcesUseCase.seed(SourceSeedData.sources());
     }
 }
