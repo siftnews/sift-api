@@ -35,6 +35,11 @@ import java.util.List;
  *       토픽 독립 전역 단계라, 토픽별로 윈도우를 다르게 잡으면 나중 토픽이 앞선 토픽의
  *       스코어링 전제를 덮어쓴다.</li>
  * </ol>
+ * <p>
+ * 조항 2를 스코어링에서 <b>구조적으로</b> 지키기 위해, 반환하는 {@link CandidateArticle}이
+ * {@code dedupClusterId}를 함께 싣는다 — 화제성 점수의 클러스터 크기를 별도 집계 쿼리가 아니라
+ * <b>이 호출로 받은 윈도우 안에서</b> 세면, 대상 집합이 윈도우를 벗어날 방법이 없다.
+ * 필터·소스 점수에 필요한 {@code sourceId}·{@code category}도 같은 뷰로 넘어온다.
  */
 public interface LoadCandidateArticlesPort {
 

@@ -21,7 +21,8 @@ class NormalizeDedupServiceTest {
     private static final Instant TO = Instant.parse("2026-07-26T00:00:00Z");
 
     private static CandidateArticle article(long id, String url, String title, String lang, String body) {
-        return new CandidateArticle(id, url, title, lang, body, Instant.parse("2026-07-2" + (id % 10) + "T00:00:00Z"));
+        return new CandidateArticle(id, id, url, title, lang, body,
+                Instant.parse("2026-07-2" + (id % 10) + "T00:00:00Z"), "DEV", null);
     }
 
     @Test
