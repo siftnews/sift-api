@@ -65,13 +65,9 @@ public final class DedupClusterer {
         return a.normalizedUrl() != null && a.normalizedUrl().equals(b.normalizedUrl());
     }
 
+    /** 규칙 본체는 {@link RepresentativeRule} — 스코어링이 클러스터를 한 건으로 줄일 때도 같은 것을 쓴다. */
     private static CandidateArticle representative(List<CandidateArticle> articles, List<Integer> indexes) {
-        return indexes.stream()
-                .map(articles::get)
-                .max(Comparator
-                        .comparing((CandidateArticle a) -> a.publishedAt() == null ? Instant.MIN : a.publishedAt())
-                        .thenComparing(CandidateArticle::articleId, Comparator.reverseOrder()))
-                .orElseThrow();
+        return RepresentativeRule.pick(indexes.stream().map(articles::get).toList());
     }
 
     private static int find(int[] parent, int x) {
