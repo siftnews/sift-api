@@ -54,7 +54,8 @@ public final class ArticleScorer {
                 matched,
                 weights);
 
-        return new ArticleScore(article.articleId(), topic.getTopicId(), breakdown.total(), breakdown, now);
+        return new ArticleScore(article.articleId(), article.sourceId(), topic.getTopicId(),
+                breakdown.total(), breakdown, now);
     }
 
     /**
