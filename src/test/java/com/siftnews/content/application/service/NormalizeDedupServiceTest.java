@@ -4,6 +4,7 @@ import com.siftnews.content.application.port.in.NormalizeDedupSummary;
 import com.siftnews.content.application.port.out.LoadCandidateArticlesPort;
 import com.siftnews.content.application.port.out.UpdateArticleClusterPort;
 import com.siftnews.content.domain.CandidateArticle;
+import com.siftnews.content.domain.ContentException;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -118,9 +119,9 @@ class NormalizeDedupServiceTest {
         NormalizeDedupService service = new NormalizeDedupService(loadPort, updatePort);
 
         assertThatThrownBy(() -> service.normalizeAndDedup(TO, FROM))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(ContentException.class);
         assertThatThrownBy(() -> service.normalizeAndDedup(FROM, FROM))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(ContentException.class);
         assertThat(updatePort.called).isFalse();
     }
 

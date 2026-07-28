@@ -151,7 +151,7 @@ class ScoreArticlesServiceTest {
     void rejectsInvalidWindow() {
         assertThatThrownBy(() -> service(devTopic(), List.of(), new FakeSaveArticleScorePort())
                 .scoreTopic(TOPIC_ID, TO, FROM))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(ContentException.class);
     }
 
     /** 후보 0건은 정상 상황이다 — 빈 저장 호출로 어댑터를 괴롭히지 않는다. */

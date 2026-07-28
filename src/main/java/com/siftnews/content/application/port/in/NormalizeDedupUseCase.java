@@ -15,7 +15,7 @@ public interface NormalizeDedupUseCase {
      * @param from 윈도우 시작(포함) — null 불가
      * @param to   윈도우 끝(미포함) — null 불가, {@code from}보다 뒤여야 한다
      * @throws NullPointerException     {@code from}·{@code to}가 null인 경우
-     * @throws IllegalArgumentException {@code from}이 {@code to}보다 앞서지 않는 경우.
+     * @throws com.siftnews.content.domain.ContentException {@code from}이 {@code to}보다 앞서지 않는 경우.
      *                                  빈 윈도우({@code from == to})도 거부한다 — 후보 0건과
      *                                  구간 계산 실수를 구분하기 위해서다.
      */
