@@ -4,6 +4,7 @@ import com.siftnews.content.application.port.in.NormalizeDedupSummary;
 import com.siftnews.content.application.port.out.LoadCandidateArticlesPort;
 import com.siftnews.content.application.port.out.UpdateArticleClusterPort;
 import com.siftnews.content.domain.CandidateArticle;
+import com.siftnews.content.domain.ContentException;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -21,7 +22,8 @@ class NormalizeDedupServiceTest {
     private static final Instant TO = Instant.parse("2026-07-26T00:00:00Z");
 
     private static CandidateArticle article(long id, String url, String title, String lang, String body) {
-        return new CandidateArticle(id, url, title, lang, body, Instant.parse("2026-07-2" + (id % 10) + "T00:00:00Z"));
+        return new CandidateArticle(id, id, url, title, lang, body,
+                Instant.parse("2026-07-2" + (id % 10) + "T00:00:00Z"), "DEV", null);
     }
 
     @Test
@@ -117,9 +119,9 @@ class NormalizeDedupServiceTest {
         NormalizeDedupService service = new NormalizeDedupService(loadPort, updatePort);
 
         assertThatThrownBy(() -> service.normalizeAndDedup(TO, FROM))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(ContentException.class);
         assertThatThrownBy(() -> service.normalizeAndDedup(FROM, FROM))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(ContentException.class);
         assertThat(updatePort.called).isFalse();
     }
 

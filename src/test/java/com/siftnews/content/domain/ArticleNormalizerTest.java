@@ -11,7 +11,7 @@ class ArticleNormalizerTest {
     private static final String LONG_BODY = "x".repeat(250);
 
     private static CandidateArticle article(String lang, String body) {
-        return new CandidateArticle(1L, "https://example.com/a", "제목", lang, body, Instant.now());
+        return new CandidateArticle(1L, 1L, "https://example.com/a", "제목", lang, body, Instant.now(), "DEV", null);
     }
 
     @Test

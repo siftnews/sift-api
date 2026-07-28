@@ -12,7 +12,7 @@ class DedupClustererTest {
     private static final double THRESHOLD = 0.7;
 
     private static CandidateArticle article(long id, String normalizedUrl, String title, Instant publishedAt) {
-        return new CandidateArticle(id, normalizedUrl, title, "en", "body", publishedAt);
+        return new CandidateArticle(id, id, normalizedUrl, title, "en", "body", publishedAt, "DEV", null);
     }
 
     @Test

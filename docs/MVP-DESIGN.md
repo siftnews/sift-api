@@ -196,14 +196,19 @@ out  UpdateSourcePort         markCrawled(sourceId, at)     // last_crawled_at �
 ### Content (선별)
 ```
 in   NormalizeDedupUseCase        normalizeAndDedup(from, to): NormalizeDedupSummary
+in   ScoreArticlesUseCase         scoreTopic(topicId, from, to): ScoreArticlesSummary
 in   BuildIssueUseCase            buildIssueForTopic(topicId, runDate): IssueId
-out  LoadTopicPort                load(topicId): Topic
+out  LoadTopicPort                load(topicId): Optional<Topic>
 out  LoadCandidateArticlesPort    loadCandidates(from, to): List<CandidateArticle>  // 윈도우 전체 재계산 (D-031)
 out  UpdateArticleClusterPort     updateClusters(clusterIdsByArticleId)  // null 값 = 해제, 벌크 (D-031)
-out  SaveArticleScorePort         saveAll(scores)
+out  SaveArticleScorePort         saveAll(scores)               // (article_id, topic_id) upsert — 재실행 멱등
 out  SaveIssuePort                save(issue, items): IssueId
 ```
 > `normalizeAndDedup`은 매 실행이 `[from, to)` 윈도우 내 후보 전체를 재계산해 실행 단위로 클러스터 상태를 통째로 교체한다 — 컷에서 탈락한 기사는 `null`로 해제되며, 이것이 재실행 멱등성의 전제다(D-031).
+>
+> `scoreTopic`은 **필터 전 후보 전체로 화제성(클러스터 크기)을 집계한 뒤**, 토픽 필터를 통과한 것들만 **클러스터당 대표 한 건**으로 줄여 점수를 매긴다. 순서가 반대면 ① 화제성이 토픽마다 달라지고(토픽 무관 값이어야 한다) ② 대표가 필터에 걸릴 때 통과할 수 있었던 같은 클러스터의 다른 기사까지 잃는다. 대표 선정 규칙은 `RepresentativeRule` 한 곳에 두고 `DedupClusterer`와 공유한다 — 갈라져도 예외가 나지 않고 다른 기사가 실릴 뿐이라 발견이 늦다.
+>
+> `CandidateArticle`은 `sourceId`·`category`·`dedupClusterId`를 함께 싣는다. 화제성의 클러스터 크기를 별도 집계 쿼리가 아니라 `loadCandidates`가 돌려준 윈도우 안에서 세면, 스코어링 대상이 윈도우를 벗어날 수 없어 **D-032 불변식 (2)가 구조적으로 지켜진다**.
 
 ### Subscriber
 ```
