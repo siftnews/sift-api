@@ -50,7 +50,7 @@ public class ScoreArticlesService implements ScoreArticlesUseCase {
         Objects.requireNonNull(from, "from");
         Objects.requireNonNull(to, "to");
         if (!from.isBefore(to)) {
-            throw new IllegalArgumentException("from은 to보다 앞서야 한다: from=" + from + ", to=" + to);
+            throw new ContentException("from은 to보다 앞서야 한다: from=" + from + ", to=" + to);
         }
 
         Topic topic = loadTopicPort.load(topicId)

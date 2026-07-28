@@ -7,6 +7,7 @@ import com.siftnews.content.application.port.out.UpdateArticleClusterPort;
 import com.siftnews.content.domain.ArticleCluster;
 import com.siftnews.content.domain.ArticleNormalizer;
 import com.siftnews.content.domain.CandidateArticle;
+import com.siftnews.content.domain.ContentException;
 import com.siftnews.content.domain.DedupClusterer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,7 +41,7 @@ public class NormalizeDedupService implements NormalizeDedupUseCase {
         Objects.requireNonNull(from, "from");
         Objects.requireNonNull(to, "to");
         if (!from.isBefore(to)) {
-            throw new IllegalArgumentException("from은 to보다 앞서야 한다: from=" + from + ", to=" + to);
+            throw new ContentException("from은 to보다 앞서야 한다: from=" + from + ", to=" + to);
         }
 
         List<CandidateArticle> loaded = loadCandidateArticlesPort.loadCandidates(from, to);
