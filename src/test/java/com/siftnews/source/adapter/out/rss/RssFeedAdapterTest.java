@@ -71,6 +71,28 @@ class RssFeedAdapterTest {
         }
     }
 
+    /**
+     * description이 없는 피드가 실제로 있다 — 한국경제는 title·link·pubDate만 싣고, 토스는
+     * 일부 항목이 content:encoded만 갖는다. 방어가 없으면 NPE로 그 소스의 수집이 통째로 실패했다
+     * (2026-07-26 e2e에서 9개 중 2개 소스 누락).
+     */
+    @Test
+    void parse는_description이_없는_항목도_변환한다() {
+        Source source = Source.restore(1L, "Test Source", SourceType.RSS,
+                "https://example.com/rss", "ko", Category.DEV, true, null);
+
+        try (InputStream feedStream = getClass().getResourceAsStream("/rss/missing-description-feed.xml")) {
+            List<RawArticle> articles = adapter.parse(source, feedStream);
+
+            assertThat(articles).hasSize(2);
+            assertThat(articles.get(0).body()).isNull();
+            assertThat(articles.get(0).title()).isEqualTo("본문 없는 기사");
+            assertThat(articles.get(1).body()).contains("content:encoded 본문");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     @Test
     void parse는_malformed_XML에_대해_예외를_던진다() {
         Source source = Source.restore(1L, "Test Source", SourceType.RSS,

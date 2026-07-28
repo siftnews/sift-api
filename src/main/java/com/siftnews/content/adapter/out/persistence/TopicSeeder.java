@@ -4,6 +4,8 @@ import com.siftnews.content.domain.Topic;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /**
@@ -11,9 +13,12 @@ import org.springframework.stereotype.Component;
  * <p>
  * {@code test} 프로파일에서는 동작하지 않는다({@code @Profile("!test")}) — 통합 테스트는
  * 자기 데이터를 직접 준비한다(CLAUDE.md). Liquibase 마이그레이션 전환은 후속(MVP-DESIGN §2).
+ * <p>
+ * 시드는 배치 Job의 전제이므로 다른 러너보다 먼저 실행한다 — 근거는 {@code SourceSeeder} javadoc.
  */
 @Component
 @Profile("!test")
+@Order(Ordered.HIGHEST_PRECEDENCE)
 class TopicSeeder implements ApplicationRunner {
 
     private final TopicJpaRepository topicJpaRepository;
