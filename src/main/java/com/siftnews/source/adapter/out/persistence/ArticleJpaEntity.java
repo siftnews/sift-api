@@ -55,6 +55,17 @@ class ArticleJpaEntity extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private Category category;
 
+    /**
+     * 선별(Content)이 매긴 dedup 클러스터 id — <b>Source는 값의 의미를 해석하지 않고 보관만 한다</b>.
+     * <p>
+     * article 스키마의 주인이 Source라 컬럼과 갱신 경로는 Source가 통제하지만(D-018·D-030),
+     * 클러스터 소속은 Content의 판단이다. 그래서 도메인 {@code Article}에는 두지 않는다 —
+     * 애그리거트가 이 값으로 아무 결정도 하지 않아, 넣으면 생성 시 항상 null인 빈 필드가 된다.
+     * 갱신은 named interface를 통한 벌크 UPDATE로만 이뤄진다(D-031 — null은 클러스터 해제).
+     */
+    @Column(length = 64)
+    private String dedupClusterId;
+
     ArticleJpaEntity(Long sourceId, String url, String normalizedUrl, String title, String body,
                       String lang, Instant publishedAt, Category category) {
         this.sourceId = sourceId;
