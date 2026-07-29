@@ -26,10 +26,12 @@ class ArticleScorePersistenceAdapterTest extends AbstractIntegrationTest {
     @Autowired
     private ArticleScoreJpaRepository articleScoreJpaRepository;
 
+    private static final Long SOURCE_ID = 7L;
+
     private static ArticleScore score(long articleId, double value) {
         ScoreBreakdown breakdown = new ScoreBreakdown(value, 0.5, 0.25, 1.0,
                 List.of("Spring", "Kafka"), ScoreWeights.DEFAULT);
-        return new ArticleScore(articleId, TOPIC_ID, breakdown.total(), breakdown, COMPUTED_AT);
+        return new ArticleScore(articleId, SOURCE_ID, TOPIC_ID, breakdown.total(), breakdown, COMPUTED_AT);
     }
 
     /** breakdown이 JSON으로 저장됐다가 그대로 돌아와야 나중에 튜닝·회귀 분석에 쓸 수 있다. */

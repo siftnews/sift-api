@@ -37,6 +37,10 @@ class ArticleScoreJpaEntity extends BaseEntity {
     @Column(nullable = false)
     private Long articleId;
 
+    /** 랭킹의 소스 쏠림 완화가 쓰는 값 — article이 Source 소유라 조인 대신 비정규화한다(D-018). */
+    @Column(nullable = false)
+    private Long sourceId;
+
     @Column(nullable = false)
     private Long topicId;
 
@@ -50,8 +54,10 @@ class ArticleScoreJpaEntity extends BaseEntity {
     @Column(nullable = false)
     private Instant computedAt;
 
-    ArticleScoreJpaEntity(Long articleId, Long topicId, double score, ScoreBreakdown breakdown, Instant computedAt) {
+    ArticleScoreJpaEntity(Long articleId, Long sourceId, Long topicId, double score,
+                          ScoreBreakdown breakdown, Instant computedAt) {
         this.articleId = articleId;
+        this.sourceId = sourceId;
         this.topicId = topicId;
         this.score = score;
         this.breakdown = breakdown;

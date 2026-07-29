@@ -88,8 +88,10 @@ topic         (id, name, slug, lang_scope,
                score_threshold, active)
               -- cadence·send_at_hour 제거 (D-019: 매일 고정 + 구독자 선호 시각)
 
-article_score (id, article_id FK, topic_id FK, score, breakdown[json], computed_at)
+article_score (id, article_id FK, source_id, topic_id FK, score, breakdown[json], computed_at)
               · UNIQUE(article_id, topic_id)
+              -- source_id는 랭킹의 소스 쏠림 완화가 쓰는 비정규화 값 — article은 Source
+              -- 소유(D-018)라 content가 조인할 수 없고, 점수 계산 시점엔 이미 아는 값이다
 
 subscriber    (id, email, status[ACTIVE|UNSUB|BOUNCED],
                preferred_send_hour,                     -- 0~23, 구독자 선택 수신 시각 (D-019)
@@ -99,8 +101,10 @@ subscriber    (id, email, status[ACTIVE|UNSUB|BOUNCED],
 subscription  (id, subscriber_id FK, topic_id FK, status[ACTIVE|PAUSED], created_at)
               · UNIQUE(subscriber_id, topic_id)
 
-issue         (id, topic_id FK, title, status[DRAFT|SCHEDULED|SENDING|SENT],
+issue         (id, topic_id FK, run_date, title, status[DRAFT|SCHEDULED|SENDING|SENT],
                scheduled_at, published_at, created_at)
+              · UNIQUE(topic_id, run_date)   -- 같은 날 같은 토픽에 호가 두 개 생기면
+                                             -- 구독자에게 같은 날 두 통이 나간다 (이슈 #27)
 
 issue_item    (id, issue_id FK, article_id FK, rank, score)
               · UNIQUE(issue_id, article_id)
@@ -197,12 +201,13 @@ out  UpdateSourcePort         markCrawled(sourceId, at)     // last_crawled_at �
 ```
 in   NormalizeDedupUseCase        normalizeAndDedup(from, to): NormalizeDedupSummary
 in   ScoreArticlesUseCase         scoreTopic(topicId, from, to): ScoreArticlesSummary
-in   BuildIssueUseCase            buildIssueForTopic(topicId, runDate): IssueId
+in   BuildIssueUseCase            buildIssueForTopic(topicId, runDate): IssueId  // 점수 재계산 없음
 out  LoadTopicPort                load(topicId): Optional<Topic>
 out  LoadCandidateArticlesPort    loadCandidates(from, to): List<CandidateArticle>  // 윈도우 전체 재계산 (D-031)
 out  UpdateArticleClusterPort     updateClusters(clusterIdsByArticleId)  // null 값 = 해제, 벌크 (D-031)
 out  SaveArticleScorePort         saveAll(scores)               // (article_id, topic_id) upsert — 재실행 멱등
-out  SaveIssuePort                save(issue, items): IssueId
+out  LoadArticleScoresPort        loadByTopic(topicId, computedAtFrom): List<ArticleScore>
+out  SaveIssuePort                save(issue): IssueId          // (topic_id, run_date) upsert + 항목 교체
 ```
 > `normalizeAndDedup`은 매 실행이 `[from, to)` 윈도우 내 후보 전체를 재계산해 실행 단위로 클러스터 상태를 통째로 교체한다 — 컷에서 탈락한 기사는 `null`로 해제되며, 이것이 재실행 멱등성의 전제다(D-031).
 >

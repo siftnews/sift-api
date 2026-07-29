@@ -12,6 +12,8 @@ interface ArticleScoreJpaRepository extends JpaRepository<ArticleScoreJpaEntity,
 
     List<ArticleScoreJpaEntity> findByTopicId(Long topicId);
 
+    List<ArticleScoreJpaEntity> findByTopicIdAndComputedAtGreaterThanEqual(Long topicId, Instant computedAtFrom);
+
     /**
      * {@code (article_id, topic_id)}가 이미 있으면 점수·근거·계산시각을 덮어쓴다.
      * <p>
@@ -25,8 +27,8 @@ interface ArticleScoreJpaRepository extends JpaRepository<ArticleScoreJpaEntity,
      */
     @Modifying
     @Query(value = """
-            INSERT INTO article_score (article_id, topic_id, score, breakdown, computed_at, created_at, updated_at)
-            VALUES (:articleId, :topicId, :score, CAST(:breakdown AS jsonb), :computedAt, :now, :now)
+            INSERT INTO article_score (article_id, source_id, topic_id, score, breakdown, computed_at, created_at, updated_at)
+            VALUES (:articleId, :sourceId, :topicId, :score, CAST(:breakdown AS jsonb), :computedAt, :now, :now)
             ON CONFLICT (article_id, topic_id) DO UPDATE SET
                 score = EXCLUDED.score,
                 breakdown = EXCLUDED.breakdown,
@@ -34,6 +36,7 @@ interface ArticleScoreJpaRepository extends JpaRepository<ArticleScoreJpaEntity,
                 updated_at = EXCLUDED.updated_at
             """, nativeQuery = true)
     void upsert(@Param("articleId") Long articleId,
+                @Param("sourceId") Long sourceId,
                 @Param("topicId") Long topicId,
                 @Param("score") double score,
                 @Param("breakdown") String breakdown,

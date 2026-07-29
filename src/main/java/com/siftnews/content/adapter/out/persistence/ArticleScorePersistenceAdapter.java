@@ -2,6 +2,7 @@ package com.siftnews.content.adapter.out.persistence;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.siftnews.content.application.port.out.LoadArticleScoresPort;
 import com.siftnews.content.application.port.out.SaveArticleScorePort;
 import com.siftnews.content.domain.ArticleScore;
 import com.siftnews.content.domain.ContentException;
@@ -15,7 +16,7 @@ import java.util.List;
 
 @Component
 @RequiredArgsConstructor
-class ArticleScorePersistenceAdapter implements SaveArticleScorePort {
+class ArticleScorePersistenceAdapter implements SaveArticleScorePort, LoadArticleScoresPort {
 
     private final ArticleScoreJpaRepository articleScoreJpaRepository;
     private final ObjectMapper objectMapper;
@@ -26,9 +27,18 @@ class ArticleScorePersistenceAdapter implements SaveArticleScorePort {
     public void saveAll(List<ArticleScore> scores) {
         Instant now = clock.instant();
         for (ArticleScore score : scores) {
-            articleScoreJpaRepository.upsert(score.articleId(), score.topicId(), score.score(),
+            articleScoreJpaRepository.upsert(score.articleId(), score.sourceId(), score.topicId(), score.score(),
                     serialize(score), score.computedAt(), now);
         }
+    }
+
+    @Override
+    public List<ArticleScore> loadByTopic(Long topicId, Instant computedAtFrom) {
+        return articleScoreJpaRepository
+                .findByTopicIdAndComputedAtGreaterThanEqual(topicId, computedAtFrom).stream()
+                .map(entity -> new ArticleScore(entity.getArticleId(), entity.getSourceId(),
+                        entity.getTopicId(), entity.getScore(), entity.getBreakdown(), entity.getComputedAt()))
+                .toList();
     }
 
     private String serialize(ArticleScore score) {
