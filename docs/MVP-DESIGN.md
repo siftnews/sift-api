@@ -81,6 +81,8 @@ source        (id, name, type[RSS|API], url, lang, category,
 article       (id, source_id FK, url, normalized_url, title, body, lang,
                published_at, category, dedup_cluster_id, created_at)
               · UNIQUE(normalized_url)
+              -- dedup_cluster_id는 Content가 매기고 Source가 보관만 한다. 도메인 Article에는
+              -- 두지 않는다 — 애그리거트가 이 값으로 아무 결정도 하지 않아 빈 필드가 된다 (이슈 #29)
 
 topic         (id, name, slug, lang_scope,
                include_keywords, exclude_keywords, keyword_weights[json],
@@ -186,7 +188,9 @@ Step retryStep   (chunk = 500)
 ```
 in   CrawlSourcesUseCase      crawlAll() / crawl(sourceId)
 in   SeedSourcesUseCase       seed(sources): int            // 심을 카탈로그는 호출자가 결정 (PR #24 리뷰 반영)
-in   (named interface)        후보 기사 조회 — Content의 LoadCandidateArticlesPort가 경유 (D-018)
+in   ArticleCatalog            findCandidates(from, to): List<ArticleCandidate>   // named interface (D-018·D-030)
+                              updateDedupClusters(clusterIdsByArticleId)          // null 값 = 해제 (D-031)
+out  ArticleQueryPort          위 두 오퍼레이션의 영속 구현
 out  LoadActiveSourcesPort    loadActive(): List<Source>
                               findActiveById(sourceId): Optional<Source>   // crawl(sourceId) 단일 조회 (PR #9 리뷰 반영)
 out  FetchFeedPort            fetch(source): List<RawArticle>
@@ -195,7 +199,9 @@ out  SaveSourcePort           saveNew(sources): int         // url conflict-igno
 out  UpdateSourcePort         markCrawled(sourceId, at)     // last_crawled_at 영속 반영 (D-022)
 ```
 > **시더는 인바운드 어댑터** (`adapter.in.bootstrap.SourceSeeder`). 기동을 자극으로 받아 `SeedSourcesUseCase`를 호출할 뿐이고, 카탈로그(`SourceSeedData`)도 같은 인바운드에 둔다 — 저장은 `SaveSourcePort`로 내려간다. `content`의 `TopicSeeder`는 아직 out 어댑터에 남아 있다(후속).
-> **Article 애그리거트는 Source 소유 (D-018).** article 테이블 스키마·멱등(UNIQUE normalized_url)의 책임자는 Source. named interface 시그니처는 구현 이슈에서 확정.
+> **Article 애그리거트는 Source 소유 (D-018).** article 테이블 스키마·멱등(UNIQUE normalized_url)의 책임자는 Source.
+>
+> named interface는 `com.siftnews.source.api` 패키지(`@NamedInterface("article-catalog")`)로 노출하고, Content는 `allowedDependencies = {"common", "source :: article-catalog"}`로 이것만 본다. 경계를 건너는 타입은 `Article` 애그리거트가 아니라 **`ArticleCandidate` record** — 애그리거트를 공개하면 Content가 Source 내부 구조 변경에 묶인다. `category`도 enum이 아니라 문자열로 넘긴다(`Category`는 Source internal). Content 쪽 `adapter/out/source/ArticleCatalogAdapter`가 이를 `CandidateArticle`로 옮긴다 — 이 매핑 한 겹이 두 모듈의 스키마를 떼어 놓는다 (이슈 #29).
 
 ### Content (선별)
 ```
