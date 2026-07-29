@@ -53,6 +53,11 @@ class ScoreArticlesServiceTest {
         public Optional<Topic> load(Long topicId) {
             return Optional.ofNullable(topic);
         }
+
+        @Override
+        public List<Topic> loadActive() {
+            return topic == null ? List.of() : List.of(topic);
+        }
     }
 
     private record FakeLoadCandidateArticlesPort(List<CandidateArticle> candidates)

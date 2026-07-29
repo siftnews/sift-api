@@ -15,6 +15,7 @@ import com.siftnews.content.domain.ScoreWeights;
 import com.siftnews.content.domain.Topic;
 import com.siftnews.content.domain.TopicFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Clock;
@@ -36,6 +37,7 @@ import java.util.Objects;
  * 덮어써서 보장한다 — 같은 윈도우를 다시 돌려도 행이 늘지 않는다.
  */
 @Slf4j
+@Service
 @RequiredArgsConstructor
 public class ScoreArticlesService implements ScoreArticlesUseCase {
 
