@@ -14,7 +14,19 @@ spring:
     job:
       enabled: false          # 부팅 시 Job 자동 실행 금지 (스케줄/트리거로 기동)
 
+  task:
+    scheduling:
+      pool:
+        # 기본값 1이면 수집(매시간)·선별(매일 06:00) 트리거가 한 스레드를 두고 줄을 선다 —
+        # 06:00에 수집이 물려 있으면 그날 발행이 그만큼 밀린다. 트리거 수만큼 확보한다.
+        size: 2
+
 sift:
+  collection:
+    # 수집 주기 (MVP-DESIGN §3①). 매시 정각은 수집기가 몰리는 시각이라 10분 비켜 둔다
+    cron: "0 10 * * * *"
+    zone: Asia/Seoul
+
   selection:
     # 매일 발행 기준 시각 (D-019). 운영값은 프로파일에서 override
     cron: "0 0 6 * * *"
