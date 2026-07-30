@@ -11,6 +11,7 @@ import com.siftnews.content.domain.IssueItem;
 import com.siftnews.content.domain.RankSelector;
 import com.siftnews.content.domain.Topic;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDate;
@@ -28,6 +29,7 @@ import java.util.Objects;
  * 발행은 하루 한 번이므로(D-019) 그날 계산된 점수 = 이번 실행분이다.
  */
 @Slf4j
+@Service
 @RequiredArgsConstructor
 public class BuildIssueService implements BuildIssueUseCase {
 

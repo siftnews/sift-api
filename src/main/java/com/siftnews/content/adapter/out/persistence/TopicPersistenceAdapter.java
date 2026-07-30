@@ -5,6 +5,7 @@ import com.siftnews.content.domain.Topic;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -16,5 +17,10 @@ class TopicPersistenceAdapter implements LoadTopicPort {
     @Override
     public Optional<Topic> load(Long topicId) {
         return topicJpaRepository.findById(topicId).map(TopicMapper::toDomain);
+    }
+
+    @Override
+    public List<Topic> loadActive() {
+        return topicJpaRepository.findByActiveTrue().stream().map(TopicMapper::toDomain).toList();
     }
 }

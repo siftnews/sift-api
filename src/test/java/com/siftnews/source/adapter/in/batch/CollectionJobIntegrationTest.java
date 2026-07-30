@@ -14,11 +14,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.ExitStatus;
+import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.test.JobLauncherTestUtils;
 import org.springframework.batch.test.context.SpringBatchTest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
@@ -45,6 +47,11 @@ class CollectionJobIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private JobLauncherTestUtils jobLauncherTestUtils;
 
+    /** selectionJob이 생기며 Job 빈이 둘이 되어, 어느 것을 돌릴지 명시해야 한다 (이슈 #31). */
+    @Autowired
+    @Qualifier("collectionJob")
+    private Job collectionJob;
+
     @Autowired
     private FakeSaveArticlePort saveArticlePort;
 
@@ -56,6 +63,7 @@ class CollectionJobIntegrationTest extends AbstractIntegrationTest {
 
     @BeforeEach
     void reset() {
+        jobLauncherTestUtils.setJob(collectionJob);
         saveArticlePort.clear();
         fetchFeedPort.clearFailures();
     }

@@ -134,19 +134,30 @@ Step collectStep (chunk = 50)
   writer     SaveArticlePort (UNIQUE normalized_url로 중복 무시)
 ```
 
-### ② selectionTrigger — 일일 발행 트리거 (@Scheduled, 매일 발행 기준 시각 — 예: 06:00, 구현 이슈에서 확정)
+### ② selectionTrigger — 일일 발행 트리거 (@Scheduled — **매일 06:00 Asia/Seoul 확정, 이슈 #31**)
 ```
 - 전체 active 토픽 대상 (D-019: 전 토픽 DAILY 고정)
-- 각 토픽에 대해 selectionJob 실행 파라미터(topicId, runDate) 투입 → 당일 이슈 생성
+- 각 토픽에 대해 selectionJob 실행 파라미터(topicId, runDate, from, to) 투입 → 당일 이슈 생성
+- 설정: sift.selection.cron / zone / window-hours (기본 24h)
 ```
+> **윈도우를 트리거가 한 번만 계산해 전 토픽에 같은 값으로 넘긴다** — 이것이 D-032 불변식 (3)("한 runDate의 모든 selectionJob 실행은 동일한 `[from, to)`를 공유")을 코드 구조로 보장하는 지점이다. 각 Job이 스스로 "지금"을 기준으로 잡으면 먼저 도는 토픽과 나중 토픽의 윈도우가 어긋나, 나중 토픽이 앞선 토픽의 스코어링 전제를 덮어쓴다.
+>
+> 윈도우 크기 **24h**는 발행이 하루 한 번이고 `topic.recency_half_life_hours` 기본값도 24라 정렬을 맞춘 값이다 (D-031·D-032가 "M2-5에서 확정"으로 남긴 항목).
+>
+> 한 토픽의 기동 실패는 나머지 토픽 발행을 막지 않는다 — 수집의 소스별 skip 격리와 같은 방침.
 
 ### ③ selectionJob — 선별 (토픽별, 트리거로 기동)
 ```
-Step normalizeDedupStep         [from, to) 윈도우 후보 전체 재계산 + dedup_cluster_id 교체
-Step scoreStep    (chunk)       토픽 키워드/최신성/화제성/신뢰도 → article_score 저장
-Step selectStep                 threshold·랭킹·다양성 → issue(DRAFT→SCHEDULED) + issue_item
-  → in: BuildIssueUseCase.buildIssueForTopic(topicId)
+Step normalizeDedupStep  (tasklet)  [from, to) 윈도우 후보 전체 재계산 + dedup_cluster_id 교체
+Step scoreStep           (tasklet)  토픽 키워드/최신성/화제성/신뢰도 → article_score 저장
+Step selectStep          (tasklet)  threshold·랭킹·소스 다양성 → issue(DRAFT) + issue_item
+  → in: NormalizeDedupUseCase / ScoreArticlesUseCase / BuildIssueUseCase
 ```
+> **세 Step 모두 tasklet이다 (이슈 #31에서 chunk → tasklet 정정).** 선별은 "윈도우 후보 전체를 다시 계산해 상태를 통째로 교체"하는 것이 멱등성의 전제라(D-031) 아이템 단위로 쪼갤 수 없다. 후보량이 커져 성능 로드맵에 오르면 재검토한다. tasklet이라 Step의 read/write count가 0이므로, 건수는 각 서비스가 자기 로그로 남기고 `SelectionMetricsListener`는 **단계별 소요시간**을 책임진다.
+>
+> `normalizeDedupStep`은 토픽 독립 전역 단계인데 selectionJob이 토픽마다 기동되므로 **토픽 수만큼 반복 실행**된다. 윈도우가 고정돼 있고 재실행이 멱등이라(D-031) 결과는 같다 — 중복 실행 비용이 측정으로 드러나면 전역 Job으로 분리한다.
+>
+> `DRAFT`→`SCHEDULED` 전이는 선별이 아니라 M3 발송 범위다.
 > MVP는 토픽 단일 처리. 성능 V3에서 토픽 파티셔닝으로 전환.
 >
 > ⚠️ **윈도우 불변식 (D-031 — M2-5 배선 시 반드시 지킬 것).** `normalizeDedupStep`은 토픽 독립 전역 단계인데 selectionJob은 토픽마다 기동되므로(위 ②), 다음 3가지가 깨지면 클러스터가 분열돼 조용히 틀린 결과가 나온다.

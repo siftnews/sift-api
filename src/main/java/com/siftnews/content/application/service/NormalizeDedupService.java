@@ -10,6 +10,7 @@ import com.siftnews.content.domain.CandidateArticle;
 import com.siftnews.content.domain.ContentException;
 import com.siftnews.content.domain.DedupClusterer;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Instant;
@@ -28,6 +29,7 @@ import java.util.TreeMap;
  * 대표 기사만 스코어링 대상이 되는 로직은 후속(Filter/Score) 단계 소관.
  */
 @Slf4j
+@Service
 @RequiredArgsConstructor
 public class NormalizeDedupService implements NormalizeDedupUseCase {
 
