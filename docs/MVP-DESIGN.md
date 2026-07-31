@@ -126,13 +126,23 @@ delivery_task (id, delivery_job_id FK, subscriber_id FK, email,
 
 4개 Job + 1개 스케줄 트리거. 각 Spring Batch Job은 **인바운드 어댑터**로 UseCase를 호출.
 
-### ① collectionJob — 수집 (주기: 매시간 등)
+### ① collectionJob — 수집 (collectionTrigger로 기동 — **매시 10분 확정, 이슈 #33**)
 ```
 Step collectStep (chunk = 50)
   reader     LoadActiveSourcesPort → 활성 소스 목록
   processor  FetchFeedPort(RSS 파싱) → 신규 기사 추출 + Normalize(URL/본문/lang)
   writer     SaveArticlePort (UNIQUE normalized_url로 중복 무시)
+
+- 설정: sift.collection.cron / zone
+- Job 파라미터: launchedAt (기동 시각 millis)
 ```
+> 주기 기본값을 **매시 정각이 아닌 10분**으로 둔 것은 정각이 수집기가 몰리는 시각이기 때문이다.
+>
+> `launchedAt`은 매 주기를 새 JobInstance로 만들기 위한 **식별 파라미터**다. 없으면 collectionJob은 파라미터가 빈 채로 기동돼 매번 같은 JobInstance가 되고, 두 번째 주기부터 `JobInstanceAlreadyCompleteException`으로 거부된다. 수집은 `UNIQUE(normalized_url)` 중복 무시 저장이라 다시 돌아도 결과가 덧나지 않는다.
+>
+> 기동 실패는 삼켜 로그만 남기고 다음 주기에 다시 시도한다 — 예외가 스케줄러 스레드까지 올라가면 이후 주기가 통째로 끊긴다. 소스별 fetch 실패는 여기까지 오지 않고 collectStep의 skip으로 격리된다.
+>
+> **스케줄러 풀 크기는 트리거 수만큼 확보한다** (`spring.task.scheduling.pool.size`). 기본값 1이면 수집·선별 트리거가 한 스레드를 두고 줄을 서, 06:00에 수집이 물려 있으면 그날 발행이 그만큼 밀린다.
 
 ### ② selectionTrigger — 일일 발행 트리거 (@Scheduled — **매일 06:00 Asia/Seoul 확정, 이슈 #31**)
 ```
