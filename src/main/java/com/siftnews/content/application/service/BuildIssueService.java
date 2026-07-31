@@ -27,8 +27,8 @@ import java.util.Objects;
  * 로드 하한은 <b>호출자가 넘긴 선별 윈도우의 {@code from}</b>이다. {@code article_score}는
  * 기사·토픽 쌍으로 upsert되어 과거 점수가 계속 남으므로, 하한이 없으면 몇 주 전 기사가 오늘 호에 섞인다.
  * <p>
- * 하한을 {@code runDate}에서 유도하지 않는다 — {@code runDate}는 존을 가진 날짜라 {@code Instant}로
- * 바꾸는 순간 어느 존의 자정이냐는 질문이 생기고, 그 존이 트리거의 존과 어긋나면 조회가 통째로 빈다.
+ * 하한을 {@code runDate}에서 유도하지 않는다 — {@code LocalDate}에는 존 정보가 없어 {@code Instant}로
+ * 바꾸려면 <b>기준 존을 골라야 하고</b>, 그 존이 {@code runDate}를 계산한 트리거의 존과 어긋나면 조회가 통째로 빈다.
  * (KST 날짜의 UTC 자정은 KST 09:00이라, 06:00 발행에서는 그날 계산된 점수가 전부 하한 미만이었다 — #35)
  * 윈도우 {@code from}을 그대로 쓰면 존 변환이 없고, 스코어링이 계산한 범위와 호가 읽는 범위도 일치한다.
  */
