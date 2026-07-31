@@ -68,4 +68,7 @@ dependencyManagement {
 
 tasks.named('test') {
     useJUnitPlatform()
+    // 테스트 JVM 시간대를 운영 존으로 고정한다. CI 러너가 UTC라 시간대 결함(#35)이 계속 녹색이었고,
+    // 로컬(KST)에서만 실패해 재현이 환경에 좌우됐다. 존을 못 박아야 어디서 돌리든 같은 결과가 나온다.
+    systemProperty 'user.timezone', 'Asia/Seoul'
 }
