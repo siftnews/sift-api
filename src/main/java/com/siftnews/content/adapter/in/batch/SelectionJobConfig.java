@@ -98,13 +98,18 @@ class SelectionJobConfig {
         };
     }
 
+    /**
+     * {@code runDate}는 호의 식별자로만 넘기고, 점수 조회 하한은 <b>윈도우 {@code from}</b>을 그대로 준다 —
+     * 서비스가 {@code runDate}에서 하한을 유도하면 존 변환이 끼어들어 조회가 통째로 빈다(#35).
+     */
     @Bean
     @StepScope
     Tasklet selectTasklet(BuildIssueUseCase buildIssueUseCase,
                           @Value("#{jobParameters['" + SelectionJobParameters.TOPIC_ID + "']}") Long topicId,
-                          @Value("#{jobParameters['" + SelectionJobParameters.RUN_DATE + "']}") String runDate) {
+                          @Value("#{jobParameters['" + SelectionJobParameters.RUN_DATE + "']}") String runDate,
+                          @Value("#{jobParameters['" + SelectionJobParameters.WINDOW_FROM + "']}") String from) {
         return (contribution, chunkContext) -> {
-            buildIssueUseCase.buildIssueForTopic(topicId, LocalDate.parse(runDate));
+            buildIssueUseCase.buildIssueForTopic(topicId, LocalDate.parse(runDate), Instant.parse(from));
             return RepeatStatus.FINISHED;
         };
     }
