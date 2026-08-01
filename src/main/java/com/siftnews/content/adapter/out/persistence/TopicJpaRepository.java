@@ -12,8 +12,6 @@ interface TopicJpaRepository extends JpaRepository<TopicJpaEntity, Long> {
 
     List<TopicJpaEntity> findByActiveTrue();
 
-    boolean existsBySlug(String slug);
-
     /**
      * slug가 이미 있으면 아무것도 하지 않고 저장하며, 삽입된 행 수(0 또는 1)를 돌려준다.
      * <p>
