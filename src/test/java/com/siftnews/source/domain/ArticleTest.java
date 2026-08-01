@@ -25,6 +25,24 @@ class ArticleTest {
         assertThat(article.getNormalizedUrl()).isEqualTo("https://example.com/news/1");
     }
 
+    /**
+     * 쿼리로 기사를 구분하는 소스(AI타임스 {@code idxno})의 두 기사가 서로 다른 키를 갖는지 —
+     * 같아지면 {@code UNIQUE(normalized_url)}에 걸려 뒤 기사가 통째로 유실된다.
+     */
+    @Test
+    void createKeepsQueryThatIdentifiesArticle() {
+        Article first = Article.create(rawWithUrl("https://www.aitimes.com/news/articleView.html?idxno=213427"), 1L);
+        Article second = Article.create(rawWithUrl("https://www.aitimes.com/news/articleView.html?idxno=213385"), 1L);
+
+        assertThat(first.getNormalizedUrl())
+                .isEqualTo("https://www.aitimes.com/news/articleView.html?idxno=213427")
+                .isNotEqualTo(second.getNormalizedUrl());
+    }
+
+    private static RawArticle rawWithUrl(String url) {
+        return new RawArticle(url, "제목", "본문", "ko", Instant.parse("2026-07-01T00:00:00Z"), Category.AI);
+    }
+
     @Test
     void createMapsRemainingFieldsDirectlyFromRawArticle() {
         Instant publishedAt = Instant.parse("2026-07-01T00:00:00Z");
