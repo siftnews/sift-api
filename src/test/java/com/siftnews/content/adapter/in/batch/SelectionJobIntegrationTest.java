@@ -22,6 +22,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.math.BigInteger;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -109,9 +110,13 @@ class SelectionJobIntegrationTest extends AbstractIntegrationTest {
     }
 
     private JobParameters parameters() {
+        return parameters(LocalDate.now());
+    }
+
+    private JobParameters parameters(LocalDate runDate) {
         return new JobParametersBuilder()
                 .addLong("topicId", topicId)
-                .addString("runDate", LocalDate.now().toString())
+                .addString("runDate", runDate.toString())
                 .addString("from", from.toString())
                 .addString("to", to.toString())
                 .addLong("launchedAt", System.currentTimeMillis())
@@ -139,6 +144,29 @@ class SelectionJobIntegrationTest extends AbstractIntegrationTest {
         // 토픽 키워드가 'Spring'이라 환율 기사는 필터에서 탈락한다.
         assertThat(count("issue_item")).isEqualTo(2);
         assertThat(count("article_score")).isEqualTo(2);
+    }
+
+    /**
+     * <b>#35 회귀 방어.</b> 운영 존 KST의 00:00~09:00에는 {@code runDate}(KST 날짜)가 <b>UTC 기준으로
+     * 아직 내일</b>이다 — 확정 발행 시각 06:00 KST가 정확히 이 구간이다. 옛 구현은 점수 조회 하한을
+     * {@code runDate}의 UTC 자정으로 잡아, 이 구간에서는 방금 계산한 점수가 전부 하한 미만이 되어
+     * <b>매일 빈 호</b>가 나갔다.
+     * <p>
+     * 그 상태를 <b>{@code runDate}로 직접 만들어</b> 고정한다. 벽시계에 맡기면 KST 09:00~24:00에 돌린
+     * 실행은 결함을 그냥 통과시킨다 — 실제로 이 이슈를 잡은 첫 실행도 로컬이 우연히 새벽이라 걸렸고,
+     * CI(UTC)는 계속 녹색이었다. 테스트 존을 고정해도(build.gradle) <b>시각 의존은 남으므로</b>
+     * 재현 조건을 데이터로 못 박는다.
+     */
+    @Test
+    void buildsIssueWhenRunDateIsAheadOfUtcDate() throws Exception {
+        saveArticles();
+
+        JobExecution execution = jobLauncherTestUtils.launchJob(parameters(LocalDate.now(ZoneOffset.UTC).plusDays(1)));
+
+        assertThat(execution.getStatus()).isEqualTo(BatchStatus.COMPLETED);
+        assertThat(count("article_score")).isEqualTo(2);
+        // 하한이 runDate에서 유도되면 여기가 0건이 된다.
+        assertThat(count("issue_item")).isEqualTo(2);
     }
 
     /** 클러스터 id가 실제로 article에 반영돼야 화제성 점수가 의미를 갖는다 (#29 배선 확인). */
