@@ -1,4 +1,4 @@
-package com.siftnews.content.adapter.out.persistence;
+package com.siftnews.content.adapter.in.bootstrap;
 
 import com.siftnews.content.domain.Topic;
 

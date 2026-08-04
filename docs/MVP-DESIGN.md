@@ -234,13 +234,18 @@ out  ArticleUrlPort           findUrlsAfter(afterId, limit) // 커서 페이징 
 in   NormalizeDedupUseCase        normalizeAndDedup(from, to): NormalizeDedupSummary
 in   ScoreArticlesUseCase         scoreTopic(topicId, from, to): ScoreArticlesSummary
 in   BuildIssueUseCase            buildIssueForTopic(topicId, runDate): IssueId  // 점수 재계산 없음
+in   SeedTopicsUseCase            seed(topics): int             // 심을 카탈로그는 호출자가 결정 (이슈 #39)
 out  LoadTopicPort                load(topicId): Optional<Topic>
 out  LoadCandidateArticlesPort    loadCandidates(from, to): List<CandidateArticle>  // 윈도우 전체 재계산 (D-031)
 out  UpdateArticleClusterPort     updateClusters(clusterIdsByArticleId)  // null 값 = 해제, 벌크 (D-031)
 out  SaveArticleScorePort         saveAll(scores)               // (article_id, topic_id) upsert — 재실행 멱등
 out  LoadArticleScoresPort        loadByTopic(topicId, computedAtFrom): List<ArticleScore>
 out  SaveIssuePort                save(issue): IssueId          // (topic_id, run_date) upsert + 항목 교체
+out  SaveTopicPort                saveNew(topics): int          // slug conflict-ignore, 동시 기동 멱등 (이슈 #39)
 ```
+> **토픽 시더도 인바운드 어댑터** (`adapter.in.bootstrap.TopicSeeder`) — Source 쪽과 같은 구조다. 이전에는 `adapter.out.persistence`에 놓인 채 JPA 리포지토리를 직접 부르고 엔티티 매핑까지 들고 있었고, 저장이 "있는지 조회 → 없으면 save"라 **두 인스턴스가 동시에 기동하면 한쪽이 slug 유니크 제약에 걸려 죽는** 창이 있었다 (이슈 #39).
+>
+> `SaveTopicPort`는 `ON CONFLICT (slug) DO NOTHING` 네이티브 insert다. `include_keywords`·`exclude_keywords`·`keyword_weights`·`source_categories` 네 컬럼은 `@JdbcTypeCode(SqlTypes.JSON)` 매핑을 우회하므로 어댑터가 직렬화한 문자열을 넘기고 리포지토리가 `jsonb`로 캐스팅한다 — Source보다 한 겹 더 들지만 동시 기동 멱등을 같은 방식으로 맞춘다.
 > `normalizeAndDedup`은 매 실행이 `[from, to)` 윈도우 내 후보 전체를 재계산해 실행 단위로 클러스터 상태를 통째로 교체한다 — 컷에서 탈락한 기사는 `null`로 해제되며, 이것이 재실행 멱등성의 전제다(D-031).
 >
 > `scoreTopic`은 **필터 전 후보 전체로 화제성(클러스터 크기)을 집계한 뒤**, 토픽 필터를 통과한 것들만 **클러스터당 대표 한 건**으로 줄여 점수를 매긴다. 순서가 반대면 ① 화제성이 토픽마다 달라지고(토픽 무관 값이어야 한다) ② 대표가 필터에 걸릴 때 통과할 수 있었던 같은 클러스터의 다른 기사까지 잃는다. 대표 선정 규칙은 `RepresentativeRule` 한 곳에 두고 `DedupClusterer`와 공유한다 — 갈라져도 예외가 나지 않고 다른 기사가 실릴 뿐이라 발견이 늦다.
