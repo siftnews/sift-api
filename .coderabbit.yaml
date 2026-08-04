@@ -17,9 +17,8 @@ reviews:
     - "!out/**"          # IntelliJ 빌드 산출물만 — `**/out/**`는 헥사고날 port/out·adapter/out까지 제외시킨다
     - "!**/.gradle/**"
     - "!**/generated/**"
-    - "!*.md"            # 루트 README만 제외 — `**/*.md`는 docs/ 설계 문서까지 가려
-                         # "구조 변경 PR에서 설계 문서를 코드와 함께 갱신"이 검증 불가로 남는다
-                         # (PR #30·#36·#38·#40에서 "문서 갱신 여부 확인 불가" 연속 재발)
+    - "!**/*.md"         # 설계 문서가 sift-docs로 이동해(D-038) 이 레포의 .md는 README뿐이다.
+                         # 설계 문서 갱신 여부는 CodeRabbit이 아니라 PR 체크리스트 CONDITIONAL로 확인한다.
     - "!**/.idea/**"
     - "!**/*.iml"
     - "!**/reports/**"
