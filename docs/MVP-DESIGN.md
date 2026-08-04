@@ -50,7 +50,7 @@
 - **제외한 후보**: 우아한형제들·LINE 기술블로그·CNBC(403), Yahoo Finance(429), 연합뉴스 경제(연결 실패), Anthropic(404 — 공식 RSS 미제공), 카카오테크(200이나 최신 글 2026-06-23로 정체).
 - **대용량 히스토리 피드 제외**: Hugging Face(831건)·OpenAI(1050건)는 전체 글을 담은 피드라 첫 수집에 수백 건이 한꺼번에 유입돼 e2e 확인을 방해한다 → 20건 규모 피드로 대체. 부하 측정용 데이터가 필요해지면 M4에서 재검토.
 - **Atom 미지원 확인 필요**: 네이버 D2 등 Atom(`<feed>`/`<entry>`) 피드는 `rome`이 파싱은 하지만 `RssFeedAdapter` 테스트가 RSS 픽스처만 다뤄 미검증 — 후속 이슈.
-- 피드 url은 **정규화하지 않고 원본 그대로** 저장한다 (`Source.create`) — 쿼리로 피드를 구분하는 사이트가 있어(`?feed=rss2`·`?id=02`) `UriNormalizer`(기사 중복 판정용, 쿼리 제거)를 재사용하면 다른 피드를 가리키게 된다.
+- 피드 url은 **정규화하지 않고 원본 그대로** 저장한다 (`Source.create`). `UriNormalizer`는 **기사 동일성 판정 전용**이다 — 추적 파라미터(`utm_*`·`at_*`·`fbclid` …)를 걷어내는데, 피드 url에서는 그중 무엇이 피드를 구분하는 파라미터인지 알 수 없다(`?feed=rss2`·`?id=02`처럼 쿼리로 피드를 나누는 사이트가 있다). 재사용하면 다른 피드를 가리킬 위험만 진다.
 
 ---
 
@@ -209,6 +209,7 @@ Step retryStep   (chunk = 500)
 ```
 in   CrawlSourcesUseCase      crawlAll() / crawl(sourceId)
 in   SeedSourcesUseCase       seed(sources): int            // 심을 카탈로그는 호출자가 결정 (PR #24 리뷰 반영)
+in   RenormalizeArticleUrlsUseCase  renormalize(): RenormalizeSummary   // 정규화 규칙 변경분 백필, 멱등 (이슈 #37)
 in   ArticleCatalog            findCandidates(from, to): List<ArticleCandidate>   // named interface (D-018·D-030)
                               updateDedupClusters(clusterIdsByArticleId)          // null 값 = 해제 (D-031)
 out  ArticleQueryPort          위 두 오퍼레이션의 영속 구현
@@ -218,8 +219,12 @@ out  FetchFeedPort            fetch(source): List<RawArticle>
 out  SaveArticlePort          saveNew(articles): int        // 중복 무시
 out  SaveSourcePort           saveNew(sources): int         // url conflict-ignore, 동시 기동 멱등
 out  UpdateSourcePort         markCrawled(sourceId, at)     // last_crawled_at 영속 반영 (D-022)
+out  ArticleUrlPort           findUrlsAfter(afterId, limit) // 커서 페이징 프로젝션 (본문 미적재)
+                              updateNormalizedUrl(id, key): boolean   // 키 점유 시 false (이슈 #37)
 ```
 > **시더는 인바운드 어댑터** (`adapter.in.bootstrap.SourceSeeder`). 기동을 자극으로 받아 `SeedSourcesUseCase`를 호출할 뿐이고, 카탈로그(`SourceSeedData`)도 같은 인바운드에 둔다 — 저장은 `SaveSourcePort`로 내려간다. `content`의 `TopicSeeder`는 아직 out 어댑터에 남아 있다(후속).
+> **기동 러너 순서**: `SourceSeeder`(수집의 전제) → `ArticleUrlRenormalizer`(옛 키 정리) → Spring Batch `JobLauncherApplicationRunner`(order 0). 재정규화가 수집보다 뒤로 밀리면 배치가 먼저 새 키로 적재해 같은 기사가 두 행으로 남는다.
+> **`ArticleUrlRenormalizer`는 Liquibase 도입 시 마이그레이션으로 옮기고 지운다** — 정규화 규칙이 바뀌면 기존 `normalized_url` 키가 무효해져 재수집 시 중복 행이 생기므로 한 번 훑어 옮겨야 하는데, 마이그레이션 인프라가 아직 없어 기동 러너로 둔 것이다. 멱등이라 매 기동마다 돌아도 결과가 덧나지 않는다 (이슈 #37).
 > **Article 애그리거트는 Source 소유 (D-018).** article 테이블 스키마·멱등(UNIQUE normalized_url)의 책임자는 Source.
 >
 > named interface는 `com.siftnews.source.api` 패키지(`@NamedInterface("article-catalog")`)로 노출하고, Content는 `allowedDependencies = {"common", "source :: article-catalog"}`로 이것만 본다. 경계를 건너는 타입은 `Article` 애그리거트가 아니라 **`ArticleCandidate` record** — 애그리거트를 공개하면 Content가 Source 내부 구조 변경에 묶인다. `category`도 enum이 아니라 문자열로 넘긴다(`Category`는 Source internal). Content 쪽 `adapter/out/source/ArticleCatalogAdapter`가 이를 `CandidateArticle`로 옮긴다 — 이 매핑 한 겹이 두 모듈의 스키마를 떼어 놓는다 (이슈 #29).

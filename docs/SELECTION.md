@@ -51,7 +51,8 @@ Subscription { subscriberId, topicId, status[ACTIVE|PAUSED] }
 ```
 
 ### 1) Normalize — 정규화 (전역 1회)
-- URL 정규화: 쿼리스트링/UTM 제거, 호스트 소문자화 → `normalizedUrl`
+- URL 정규화: **추적 파라미터 제거**(`utm_*`·`at_*`·`fbclid`·`gclid` 등), 남은 쿼리는 키 정렬해 보존, 호스트 소문자화 → `normalizedUrl`
+  - **쿼리를 통째로 버리지 않는다 (이슈 #37)** — `?idxno=213427`처럼 쿼리로 기사를 구분하는 소스(AI타임스 등 한국 언론사 다수)의 기사가 전부 같은 키로 환산돼, 적재는 `UNIQUE(normalized_url)`에 걸려 50건 중 1건만 남고(2026-08-01 실측) 아래 Dedup 1차 키까지 함께 무너졌다
 - 본문 정제: HTML 태그/보일러플레이트 제거, 공백 정리
 - 메타 추출: 언어, 본문 길이, 발행시각(없으면 수집시각)
 - 컷: 언어 불일치, 본문 최소 길이 미만 → drop

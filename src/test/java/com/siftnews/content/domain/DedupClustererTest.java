@@ -1,5 +1,6 @@
 package com.siftnews.content.domain;
 
+import com.siftnews.common.UriNormalizer;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -24,6 +25,24 @@ class DedupClustererTest {
 
         assertThat(clusters).hasSize(1);
         assertThat(clusters.get(0).memberIds()).containsExactlyInAnyOrder(1L, 2L);
+    }
+
+    /**
+     * 정규화 → dedup 연결 지점의 회귀 (2026-08-01) — 병합 기준 ①이 {@code normalizedUrl} 완전
+     * 일치라, 정규화가 쿼리를 통째로 버리던 시절에는 <b>제목이 전혀 다른 기사들이 한 클러스터로
+     * 병합</b>됐다. 적재 실패({@code UNIQUE}) 뒤에 가려져 있던 두 번째 피해다.
+     */
+    @Test
+    void articlesDistinguishedOnlyByQueryStayInSeparateClusters() {
+        String first = UriNormalizer.normalize("https://www.aitimes.com/news/articleView.html?idxno=213427");
+        String second = UriNormalizer.normalize("https://www.aitimes.com/news/articleView.html?idxno=213385");
+
+        List<ArticleCluster> clusters = DedupClusterer.cluster(List.of(
+                article(1L, first, "완전히 다른 제목 하나", Instant.parse("2026-07-20T00:00:00Z")),
+                article(2L, second, "전혀 무관한 제목 둘", Instant.parse("2026-07-21T00:00:00Z"))
+        ), THRESHOLD);
+
+        assertThat(clusters).hasSize(2);
     }
 
     @Test
