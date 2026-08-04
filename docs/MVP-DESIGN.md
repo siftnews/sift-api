@@ -1,6 +1,6 @@
 # Sift — MVP 상세 설계
 
-> 상위 기획 [PLAN.md](https://github.com/siftnews/sift-docs/blob/main/PLAN.md) · 선별 상세 [SELECTION.md](./SELECTION.md) · 최종 수정: 2026-07-13 (M1-4 Source 영속 어댑터 반영, D-022)
+> 상위 기획 [PLAN.md](https://github.com/siftnews/sift-docs/blob/main/references/PLAN.md) · 선별 상세 [SELECTION.md](./SELECTION.md) · 최종 수정: 2026-07-13 (M1-4 Source 영속 어댑터 반영, D-022)
 >
 > 범위: V1(베이스라인) 구현을 위한 ERD · 배치 Job/Step · 포트 시그니처
 

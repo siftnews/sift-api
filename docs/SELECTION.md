@@ -1,7 +1,7 @@
 # Sift — 선별 파이프라인 설계 (Selection Pipeline)
 
 > 이 프로젝트의 심장. "원하는 뉴스만 걸러준다"를 실제로 구현하는 부분.
-> 상위 기획은 [PLAN.md](https://github.com/siftnews/sift-docs/blob/main/PLAN.md) 참고. · 최종 수정: 2026-07-07
+> 상위 기획은 [PLAN.md](https://github.com/siftnews/sift-docs/blob/main/references/PLAN.md) 참고. · 최종 수정: 2026-07-07
 
 ---
 
@@ -136,7 +136,7 @@ issue_item    (id, issue_id, article_id, rank, score)
 > `article`은 수집 배치가 채우고(**Source 소유, D-018** — Content는 named interface로 조회), `article_score`/`issue`/`issue_item`은 가공(선별) 배치가 채운다.
 > `dedup_cluster_id` 갱신은 **Source가 named interface에 노출하는 갱신 오퍼레이션**을 Content가 호출해 수행한다 (D-030 — D-018 꼬리 해소). 후보 조회도 Source named interface 경유.
 > **실 배선 완료 (이슈 #29)** — `ArticleCatalog.findCandidates(from, to)` / `updateDedupClusters(map)`. 윈도우는 `article.created_at` 기준 `[from, to)` 반열림이며 **Testcontainers로 경계를 실검증**했다(from 포함·to 미포함). #19~#27까지는 fake 포트로만 확인되던 경로다.
-> 이후 발송 배치가 `issue` → 토픽 구독자 → `delivery_task` 스냅샷을 만든다 ([PLAN.md](https://github.com/siftnews/sift-docs/blob/main/PLAN.md) 5장).
+> 이후 발송 배치가 `issue` → 토픽 구독자 → `delivery_task` 스냅샷을 만든다 ([PLAN.md](https://github.com/siftnews/sift-docs/blob/main/references/PLAN.md) 5장).
 
 ---
 

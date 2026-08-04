@@ -2,7 +2,7 @@
 
 > 컨텍스트 간 도메인 이벤트의 계약 문서. 컨텍스트 맵(siftnews_설계 자료.drawio)과 정합 유지.
 > MVP 이벤트: `DeliveryJobCompleted` · 2차: `BounceDetected`
-> (검토 후 제외된 이벤트의 이력은 [DECISIONS](https://github.com/siftnews/sift-docs/blob/main/DECISIONS.md) 참조 — 예: IssueScheduled, D-019)
+> (검토 후 제외된 이벤트의 이력은 [DECISIONS](https://github.com/siftnews/sift-docs/blob/main/adr/DECISIONS.md) 참조 — 예: IssueScheduled, D-019)
 >
 > 공통 구현 규약: 발행 = `ApplicationEventPublisher` (상태 전이와 같은 트랜잭션 안에서 publish),
 > 구독 = `@ApplicationModuleListener` (커밋 후 + 비동기 + Event Publication Registry 영속화 → **at-least-once**).
