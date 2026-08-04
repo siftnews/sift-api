@@ -11,12 +11,13 @@
 
 | 위치 | 내용 |
 |---|---|
-| [siftnews/sift-docs](https://github.com/siftnews/sift-docs) | 하네스 설계(HARNESS)·기획(PLAN)·루프 운영 기록(STATE·BACKLOG·TASKS·DECISIONS) — **커밋 히스토리 자체가 루프를 실제로 운영한 증거** |
-| [.claude/settings.json](.claude/settings.json) | 권한 게이트 — 커밋·push·병합 등 되돌리기 어려운 작업은 deny, 사람이 최종 수행 |
-| [.claude/skills/](.claude/skills/) | 자작 스킬 — 반복 작업(유스케이스 구현·단위 테스트) 표준화 |
+| [siftnews/sift-docs](https://github.com/siftnews/sift-docs) | 하네스 설계([HARNESS](https://github.com/siftnews/sift-docs/blob/main/references/HARNESS.md))·기획([PLAN](https://github.com/siftnews/sift-docs/blob/main/references/PLAN.md))·[코드 규약](https://github.com/siftnews/sift-docs/blob/main/references/coding-conventions.md)·[세션 역할 3종](https://github.com/siftnews/sift-docs/tree/main/roles)·[결정 로그](https://github.com/siftnews/sift-docs/blob/main/adr/DECISIONS.md)·루프 운영 기록(STATE·TASKS·BACKLOG) — **커밋 히스토리 자체가 루프를 실제로 운영한 증거** |
+| [.claude/settings.json](.claude/settings.json) | 권한 게이트 — 병합·릴리스·인프라 쓰기 등 되돌리기 어려운 작업은 deny |
 | [docs/](docs/) | 이 레포 종속 설계 문서 — 코드와 같은 PR에서 리뷰·정합 유지 (D-021) |
 
-작업 단위는 **이슈 → 브랜치 → PR → 리뷰 → 병합** 흐름을 따르며, git/GitHub 쓰기는 사람이 직접 수행합니다 (에이전트는 초안·구현·자가검증까지).
+작업 단위는 **이슈 → 브랜치 → PR → 리뷰 → 병합** 흐름을 따릅니다. 세션은 **🧭 조율 · 🔧 구현 · 👀 검수** 세 역할로 나뉘고 그 경계는 지침이 아니라 **권한 프로파일로 강제**됩니다 — 조율 세션은 코드를 편집할 수 없고, 구현 세션은 루프 문서를 쓸 수 없으며, 검수 세션은 아무것도 고칠 수 없습니다.
+
+이슈·PR 생성과 커밋·push는 **에이전트가 실행**하고(기록은 저자 명의), **병합·리뷰 승인·이슈 close·릴리스는 사람**이 수행합니다.
 
 ## 아키텍처
 
@@ -27,7 +28,7 @@
 - **Spring Batch Job = 인바운드 어댑터** — 도메인은 배치를 모른다
 - 발송 수단은 `SendEmailPort` 뒤로 추상화 (로컬 SMTP ↔ SES 프로파일 전환)
 
-설계 문서: [MVP-DESIGN](docs/MVP-DESIGN.md) (ERD·배치 Job/Step·포트) · [SELECTION](docs/SELECTION.md) (선별 파이프라인) · [EVENTS](docs/EVENTS.md) (도메인 이벤트) — 상위 기획은 [sift-docs의 PLAN](https://github.com/siftnews/sift-docs/blob/main/PLAN.md)
+설계 문서: [MVP-DESIGN](docs/MVP-DESIGN.md) (ERD·배치 Job/Step·포트) · [SELECTION](docs/SELECTION.md) (선별 파이프라인) · [EVENTS](docs/EVENTS.md) (도메인 이벤트) — 상위 기획은 [sift-docs의 PLAN](https://github.com/siftnews/sift-docs/blob/main/references/PLAN.md)
 
 ## 시작하기
 
