@@ -1,6 +1,5 @@
 package com.siftnews.source.adapter.out.persistence;
 
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -27,12 +26,4 @@ interface ArticleJpaRepository extends JpaRepository<ArticleJpaEntity, Long> {
     @Query("update ArticleJpaEntity a set a.dedupClusterId = :clusterId where a.id in :ids")
     void updateDedupClusterId(@Param("clusterId") String clusterId, @Param("ids") Collection<Long> ids);
 
-    /** 재정규화용 커서 페이징 — 프로젝션이라 본문(text)을 싣지 않는다 (이슈 #37). */
-    List<ArticleUrlProjection> findByIdGreaterThanOrderByIdAsc(Long id, Pageable pageable);
-
-    boolean existsByNormalizedUrl(String normalizedUrl);
-
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("update ArticleJpaEntity a set a.normalizedUrl = :normalizedUrl where a.id = :id")
-    void updateNormalizedUrl(@Param("id") Long id, @Param("normalizedUrl") String normalizedUrl);
 }
