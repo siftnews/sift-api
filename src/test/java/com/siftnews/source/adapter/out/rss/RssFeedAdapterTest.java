@@ -42,6 +42,28 @@ class RssFeedAdapterTest {
     }
 
     @Test
+    void parse는_Atom_피드를_RawArticle_목록으로_변환한다() {
+        Source source = Source.restore(1L, "네이버 D2", SourceType.RSS,
+                "https://d2.naver.com/d2.atom", "ko", Category.PROGRAMMING, true, null);
+
+        try (InputStream feedStream = getClass().getResourceAsStream("/rss/valid-atom-feed.xml")) {
+            List<RawArticle> articles = adapter.parse(source, feedStream);
+
+            assertThat(articles).hasSize(2);
+
+            RawArticle first = articles.get(0);
+            assertThat(first.url()).isEqualTo("https://d2.naver.com/news/1001");
+            assertThat(first.title()).isEqualTo("첫 번째 D2 글");
+            assertThat(first.body()).contains("첫 번째 본문");
+            assertThat(first.lang()).isEqualTo("ko");
+            assertThat(first.category()).isEqualTo(Category.PROGRAMMING);
+            assertThat(first.publishedAt()).isNull();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test
     void parse는_아이템이_없는_피드에_대해_빈_목록을_반환한다() {
         Source source = Source.restore(1L, "Test Source", SourceType.RSS,
                 "https://example.com/rss", "en", Category.DEV, true, null);
