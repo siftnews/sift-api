@@ -1,0 +1,10 @@
+# Graphify output and local build state
+graphify-out/
+build/
+.gradle/
+
+# Harness/editor configuration is not part of the API knowledge graph
+.claude/
+.agents/
+.omc/
+.omx/
