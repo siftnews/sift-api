@@ -20,8 +20,10 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigInteger;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
 
@@ -40,6 +42,7 @@ class SelectionJobIntegrationTest extends AbstractIntegrationTest {
     private static final String RELEVANT_BODY = "Spring 배치 이야기. ".repeat(30);
     /** 토픽 키워드가 <b>본문에도</b> 없어야 필터에서 탈락한다 — 제목만 다르게 해선 걸러지지 않는다. */
     private static final String UNRELATED_BODY = "환율과 금리 동향 분석. ".repeat(30);
+    private static final ZoneId SELECTION_ZONE = ZoneId.of("Asia/Seoul");
 
     @Autowired
     private JobLauncherTestUtils jobLauncherTestUtils;
@@ -62,9 +65,13 @@ class SelectionJobIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private TransactionTemplate transactionTemplate;
 
+    @Autowired
+    private Clock clock;
+
     private Long topicId;
     private Instant from;
     private Instant to;
+    private long launchSequence;
 
     @BeforeEach
     void setUp() {
@@ -77,6 +84,7 @@ class SelectionJobIntegrationTest extends AbstractIntegrationTest {
             entityManager.createNativeQuery("delete from topic").executeUpdate();
         });
         topicId = transactionTemplate.execute(status -> insertDevTopic());
+        launchSequence = 0;
     }
 
     /** 토픽 저장 포트가 없어(시더는 {@code @Profile("!test")}) 네이티브로 심는다. */
@@ -99,18 +107,18 @@ class SelectionJobIntegrationTest extends AbstractIntegrationTest {
                 article("https://ex.com/spring-batch", "Spring 배치 튜닝", RELEVANT_BODY),
                 article("https://ex.com/spring-boot", "Spring Boot 3.5 정리", RELEVANT_BODY),
                 article("https://ex.com/unrelated", "환율 급등 분석", UNRELATED_BODY)));
-        // 윈도우는 created_at 기준이라, 저장 직후의 지금을 감싸도록 잡는다.
-        to = Instant.now().plusSeconds(60);
+        // 윈도우는 created_at 기준이라, 고정 시각을 기준으로 기사를 감싸도록 잡는다.
+        to = clock.instant().plusSeconds(60);
         from = to.minusSeconds(3600);
     }
 
-    private static Article article(String url, String title, String body) {
+    private Article article(String url, String title, String body) {
         return Article.create(new RawArticle(url, title, body, "ko",
-                Instant.now().minusSeconds(600), Category.DEV), 7L);
+                clock.instant().minusSeconds(600), Category.DEV), 7L);
     }
 
     private JobParameters parameters() {
-        return parameters(LocalDate.now());
+        return parameters(LocalDate.ofInstant(clock.instant(), SELECTION_ZONE));
     }
 
     private JobParameters parameters(LocalDate runDate) {
@@ -119,7 +127,7 @@ class SelectionJobIntegrationTest extends AbstractIntegrationTest {
                 .addString("runDate", runDate.toString())
                 .addString("from", from.toString())
                 .addString("to", to.toString())
-                .addLong("launchedAt", System.currentTimeMillis())
+                .addLong("launchedAt", ++launchSequence)
                 .toJobParameters();
     }
 
@@ -161,7 +169,8 @@ class SelectionJobIntegrationTest extends AbstractIntegrationTest {
     void buildsIssueWhenRunDateIsAheadOfUtcDate() throws Exception {
         saveArticles();
 
-        JobExecution execution = jobLauncherTestUtils.launchJob(parameters(LocalDate.now(ZoneOffset.UTC).plusDays(1)));
+        JobExecution execution = jobLauncherTestUtils.launchJob(
+                parameters(LocalDate.ofInstant(clock.instant(), ZoneOffset.UTC).plusDays(1)));
 
         assertThat(execution.getStatus()).isEqualTo(BatchStatus.COMPLETED);
         assertThat(count("article_score")).isEqualTo(2);
@@ -199,7 +208,7 @@ class SelectionJobIntegrationTest extends AbstractIntegrationTest {
     /** 후보가 없어도 Job은 성공하고 빈 호를 남긴다 — "아직 안 돌았다"와 구분되어야 한다. */
     @Test
     void completesWithEmptyIssueWhenNoCandidates() throws Exception {
-        to = Instant.now();
+        to = clock.instant();
         from = to.minusSeconds(3600);
 
         JobExecution execution = jobLauncherTestUtils.launchJob(parameters());
