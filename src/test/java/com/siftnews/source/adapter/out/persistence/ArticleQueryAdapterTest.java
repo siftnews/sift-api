@@ -7,7 +7,9 @@ import com.siftnews.source.api.ArticleCandidate;
 import com.siftnews.source.api.ArticleCatalog;
 import com.siftnews.source.domain.Category;
 import com.siftnews.support.AbstractIntegrationTest;
+import com.siftnews.support.TestDatabaseFixtures;
 import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,6 +47,11 @@ class ArticleQueryAdapterTest extends AbstractIntegrationTest {
 
     @Autowired
     private EntityManager entityManager;
+
+    @BeforeEach
+    void setUp() {
+        TestDatabaseFixtures.source(entityManager, 7L);
+    }
 
     /**
      * {@code created_at}은 JPA Auditing이 저장 시각으로 채우므로, 윈도우 경계를 검증하려면

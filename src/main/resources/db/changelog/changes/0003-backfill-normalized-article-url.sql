@@ -14,11 +14,19 @@ WITH candidate AS (
            ), '') AS target_normalized_url
     FROM article
     WHERE position('?' IN url) > 0
+), ranked_candidate AS (
+    SELECT candidate.*,
+           row_number() OVER (
+               PARTITION BY target_normalized_url
+               ORDER BY id
+           ) AS target_rank
+    FROM candidate
 )
 UPDATE article AS target
 SET normalized_url = candidate.target_normalized_url
-FROM candidate
+FROM ranked_candidate AS candidate
 WHERE target.id = candidate.id
+  AND candidate.target_rank = 1
   AND target.normalized_url <> candidate.target_normalized_url
   AND NOT EXISTS (
       SELECT 1

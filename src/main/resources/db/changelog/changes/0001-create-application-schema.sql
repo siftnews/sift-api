@@ -95,3 +95,28 @@ CREATE TABLE event_publication (
     event_type VARCHAR(255) NOT NULL,
     completion_date TIMESTAMP(6) WITH TIME ZONE
 );
+
+-- 참조 무결성은 모듈 간 데이터 소유권을 바꾸지 않고 DB에서 orphan만 방지한다.
+-- 삭제/갱신 동작은 아직 도메인 유스케이스가 없으므로 PostgreSQL 기본(NO ACTION)을 사용한다.
+ALTER TABLE article
+    ADD CONSTRAINT fk_article_source FOREIGN KEY (source_id) REFERENCES source (id);
+ALTER TABLE article_score
+    ADD CONSTRAINT fk_article_score_article FOREIGN KEY (article_id) REFERENCES article (id);
+ALTER TABLE article_score
+    ADD CONSTRAINT fk_article_score_source FOREIGN KEY (source_id) REFERENCES source (id);
+ALTER TABLE article_score
+    ADD CONSTRAINT fk_article_score_topic FOREIGN KEY (topic_id) REFERENCES topic (id);
+ALTER TABLE issue
+    ADD CONSTRAINT fk_issue_topic FOREIGN KEY (topic_id) REFERENCES topic (id);
+ALTER TABLE issue_item
+    ADD CONSTRAINT fk_issue_item_issue FOREIGN KEY (issue_id) REFERENCES issue (id);
+ALTER TABLE issue_item
+    ADD CONSTRAINT fk_issue_item_article FOREIGN KEY (article_id) REFERENCES article (id);
+
+CREATE INDEX idx_article_source_id ON article (source_id);
+CREATE INDEX idx_article_score_article_id ON article_score (article_id);
+CREATE INDEX idx_article_score_source_id ON article_score (source_id);
+CREATE INDEX idx_article_score_topic_id ON article_score (topic_id);
+CREATE INDEX idx_issue_topic_id ON issue (topic_id);
+CREATE INDEX idx_issue_item_issue_id ON issue_item (issue_id);
+CREATE INDEX idx_issue_item_article_id ON issue_item (article_id);

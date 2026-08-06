@@ -5,6 +5,9 @@ import com.siftnews.content.domain.Issue;
 import com.siftnews.content.domain.IssueItem;
 import com.siftnews.content.domain.IssueStatus;
 import com.siftnews.support.AbstractIntegrationTest;
+import com.siftnews.support.TestDatabaseFixtures;
+import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +31,18 @@ class IssuePersistenceAdapterTest extends AbstractIntegrationTest {
 
     @Autowired
     private IssueItemJpaRepository issueItemJpaRepository;
+
+    @Autowired
+    private EntityManager entityManager;
+
+    @BeforeEach
+    void setUp() {
+        TestDatabaseFixtures.source(entityManager, 7L);
+        TestDatabaseFixtures.topic(entityManager, TOPIC_ID);
+        TestDatabaseFixtures.article(entityManager, 11L, 7L);
+        TestDatabaseFixtures.article(entityManager, 12L, 7L);
+        TestDatabaseFixtures.article(entityManager, 99L, 7L);
+    }
 
     private static Issue issue(List<IssueItem> items) {
         return Issue.draft(TOPIC_ID, RUN_DATE, "개발 2026-07-27", items);
