@@ -5,6 +5,9 @@ import com.siftnews.content.domain.ArticleScore;
 import com.siftnews.content.domain.ScoreBreakdown;
 import com.siftnews.content.domain.ScoreWeights;
 import com.siftnews.support.AbstractIntegrationTest;
+import com.siftnews.support.TestDatabaseFixtures;
+import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +28,17 @@ class ArticleScorePersistenceAdapterTest extends AbstractIntegrationTest {
 
     @Autowired
     private ArticleScoreJpaRepository articleScoreJpaRepository;
+
+    @Autowired
+    private EntityManager entityManager;
+
+    @BeforeEach
+    void setUp() {
+        TestDatabaseFixtures.source(entityManager, SOURCE_ID);
+        TestDatabaseFixtures.topic(entityManager, TOPIC_ID);
+        TestDatabaseFixtures.article(entityManager, 11L, SOURCE_ID);
+        TestDatabaseFixtures.article(entityManager, 12L, SOURCE_ID);
+    }
 
     private static final Long SOURCE_ID = 7L;
 

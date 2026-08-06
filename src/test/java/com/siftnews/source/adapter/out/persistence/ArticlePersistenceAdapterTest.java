@@ -4,6 +4,9 @@ import com.siftnews.source.domain.Article;
 import com.siftnews.source.domain.Category;
 import com.siftnews.source.domain.RawArticle;
 import com.siftnews.support.AbstractIntegrationTest;
+import com.siftnews.support.TestDatabaseFixtures;
+import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +27,14 @@ class ArticlePersistenceAdapterTest extends AbstractIntegrationTest {
 
     @Autowired
     private ArticlePersistenceAdapter articlePersistenceAdapter;
+
+    @Autowired
+    private EntityManager entityManager;
+
+    @BeforeEach
+    void setUp() {
+        TestDatabaseFixtures.source(entityManager, SOURCE_ID);
+    }
 
     @Test
     void saveNewPersistsAllDistinctArticles() {

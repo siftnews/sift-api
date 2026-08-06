@@ -5,6 +5,7 @@ import com.siftnews.source.domain.Article;
 import com.siftnews.source.domain.Category;
 import com.siftnews.source.domain.RawArticle;
 import com.siftnews.support.AbstractIntegrationTest;
+import com.siftnews.support.TestDatabaseFixtures;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -82,6 +83,7 @@ class SelectionJobIntegrationTest extends AbstractIntegrationTest {
             entityManager.createNativeQuery("delete from article_score").executeUpdate();
             entityManager.createNativeQuery("delete from article").executeUpdate();
             entityManager.createNativeQuery("delete from topic").executeUpdate();
+            TestDatabaseFixtures.source(entityManager, 7L);
         });
         topicId = transactionTemplate.execute(status -> insertDevTopic());
         launchSequence = 0;

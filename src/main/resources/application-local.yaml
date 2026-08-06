@@ -13,7 +13,8 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update          # MVP 편의. 추후 Liquibase 마이그레이션으로 전환 권장
+      # 스키마 변경은 Liquibase changelog만 수행하고, Hibernate는 엔티티와의 정합성만 검증한다.
+      ddl-auto: validate
     properties:
       hibernate:
         format_sql: true
@@ -21,7 +22,8 @@ spring:
 
   batch:
     jdbc:
-      initialize-schema: always # Spring Batch 메타테이블 자동 생성 (운영은 마이그레이션)
+      # Batch 메타테이블도 db/changelog의 버전드 changeset으로 관리한다.
+      initialize-schema: never
 
   mail:
     host: localhost
