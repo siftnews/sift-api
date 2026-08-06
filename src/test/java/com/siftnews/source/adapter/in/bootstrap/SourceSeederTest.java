@@ -27,19 +27,20 @@ class SourceSeederTest extends AbstractIntegrationTest {
     private LoadActiveSourcesPort loadActiveSourcesPort;
 
     @Test
-    void seedsNineSourcesIdempotently() {
+    void seedsTenSourcesIdempotently() {
         runSeeder();
 
         assertThat(loadActiveSourcesPort.loadActive())
-                .hasSize(9)
+                .hasSize(10)
                 .extracting(Source::getUrl)
                 .contains("https://news.ycombinator.com/rss",
+                        "https://d2.naver.com/d2.atom",
                         "https://www.aitimes.com/rss/allArticle.xml",
                         "https://feeds.bbci.co.uk/news/business/rss.xml");
 
         runSeeder();
 
-        assertThat(loadActiveSourcesPort.loadActive()).hasSize(9);
+        assertThat(loadActiveSourcesPort.loadActive()).hasSize(10);
     }
 
     /**
@@ -50,7 +51,7 @@ class SourceSeederTest extends AbstractIntegrationTest {
     void reseedInsertsNothing() {
         List<Source> sources = SourceSeedData.sources();
 
-        assertThat(seedSourcesUseCase.seed(sources)).isEqualTo(9);
+        assertThat(seedSourcesUseCase.seed(sources)).isEqualTo(10);
         assertThat(seedSourcesUseCase.seed(sources)).isZero();
     }
 
@@ -62,7 +63,7 @@ class SourceSeederTest extends AbstractIntegrationTest {
     void seedsAllSourcesActiveAndUncrawled() {
         runSeeder();
 
-        assertThat(loadActiveSourcesPort.loadActive()).hasSize(9)
+        assertThat(loadActiveSourcesPort.loadActive()).hasSize(10)
                 .allSatisfy(source -> {
                     assertThat(source.isActive()).isTrue();
                     assertThat(source.getLastCrawledAt()).isNull();

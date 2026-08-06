@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <title>D2 Blog</title>
+    <link rel="alternate" href="https://d2.naver.com"/>
+    <id>https://d2.naver.com/blog.atom</id>
+    <updated>2026-08-05T05:11:40Z</updated>
+    <entry>
+        <title>첫 번째 D2 글</title>
+        <link rel="alternate" href="https://d2.naver.com/news/1001"/>
+        <id>https://d2.naver.com/news/1001</id>
+        <updated>2026-08-05T05:11:40Z</updated>
+        <content type="html">&lt;p&gt;첫 번째 본문&lt;/p&gt;</content>
+    </entry>
+    <entry>
+        <title>두 번째 D2 글</title>
+        <link rel="alternate" href="https://d2.naver.com/news/1002"/>
+        <id>https://d2.naver.com/news/1002</id>
+        <updated>2026-08-04T05:11:40Z</updated>
+        <content type="html">&lt;p&gt;두 번째 본문&lt;/p&gt;</content>
+    </entry>
+</feed>
