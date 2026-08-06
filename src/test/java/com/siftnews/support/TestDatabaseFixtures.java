@@ -7,6 +7,7 @@ public final class TestDatabaseFixtures {
 
     private TestDatabaseFixtures() {}
 
+    /** 테스트용 Source 부모 행을 준비한다. */
     public static void source(EntityManager entityManager, long id) {
         entityManager.createNativeQuery("""
                 INSERT INTO source (id, created_at, updated_at, name, type, url, lang, category, active)
@@ -19,6 +20,7 @@ public final class TestDatabaseFixtures {
                 .executeUpdate();
     }
 
+    /** 테스트용 Topic 부모 행을 준비한다. */
     public static void topic(EntityManager entityManager, long id) {
         entityManager.createNativeQuery("""
                 INSERT INTO topic (id, created_at, updated_at, name, slug, lang_scope,
@@ -35,6 +37,7 @@ public final class TestDatabaseFixtures {
                 .executeUpdate();
     }
 
+    /** 테스트용 Article 행을 준비한다. 호출 전에 source fixture가 존재해야 한다. */
     public static void article(EntityManager entityManager, long id, long sourceId) {
         entityManager.createNativeQuery("""
                 INSERT INTO article (id, created_at, updated_at, source_id, url, normalized_url,

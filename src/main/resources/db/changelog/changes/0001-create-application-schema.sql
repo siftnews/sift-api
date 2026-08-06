@@ -114,9 +114,6 @@ ALTER TABLE issue_item
     ADD CONSTRAINT fk_issue_item_article FOREIGN KEY (article_id) REFERENCES article (id);
 
 CREATE INDEX idx_article_source_id ON article (source_id);
-CREATE INDEX idx_article_score_article_id ON article_score (article_id);
 CREATE INDEX idx_article_score_source_id ON article_score (source_id);
 CREATE INDEX idx_article_score_topic_id ON article_score (topic_id);
-CREATE INDEX idx_issue_topic_id ON issue (topic_id);
-CREATE INDEX idx_issue_item_issue_id ON issue_item (issue_id);
 CREATE INDEX idx_issue_item_article_id ON issue_item (article_id);
