@@ -11,7 +11,7 @@ import java.util.Objects;
  * 선별 기준 애그리거트 — 구독자가 고르는 관심 토픽(dev/ai/econ 등).
  * <p>
  * 후보 기사를 끌어올 소스 카테고리와, 필터·스코어링·랭킹에 쓰는 키워드/가중치/임계값을 담는다
- * (파이프라인 상세는 docs/SELECTION.md). JPA·Spring 무의존 순수 도메인이다(D-009).
+ * (파이프라인 상세는 https://github.com/siftnews/sift-docs/blob/main/references/SELECTION.md). JPA·Spring 무의존 순수 도메인이다(D-009).
  * <p>
  * {@code sourceCategories}는 source 모듈의 Category enum이 아니라 <b>문자열 태그</b>다 —
  * content 모듈이 source 내부에 코드 의존을 만들지 않도록 느슨하게 결합한다(Modulith 경계).
