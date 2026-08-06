@@ -2,8 +2,8 @@ package com.siftnews.subscriber.application.service;
 
 import com.siftnews.subscriber.application.port.out.LoadSubscriberPort;
 import com.siftnews.subscriber.application.port.out.SaveSubscriberPort;
+import com.siftnews.subscriber.domain.ConflictException;
 import com.siftnews.subscriber.domain.Subscriber;
-import com.siftnews.subscriber.domain.SubscriberException;
 import com.siftnews.subscriber.domain.SubscriberStatus;
 import org.junit.jupiter.api.Test;
 
@@ -13,14 +13,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class SubscriberServiceTest {
+
     @Test
     void registersNewSubscriber() {
-        LoadSubscriberPort load = new LoadSubscriberPort() {
-            public Optional<Subscriber> load(Long id) { return Optional.empty(); }
-            public Optional<Subscriber> loadByEmail(String email) { return Optional.empty(); }
-        };
-        SaveSubscriberPort save = subscriber -> Subscriber.restore(10L, subscriber.getEmail(), subscriber.getStatus(), subscriber.getPreferredSendHour());
-        SubscriberService service = new SubscriberService(load, save);
+        SubscriberService service = new SubscriberService(
+                new FakeLoadSubscriberPort(Optional.empty(), Optional.empty()),
+                subscriber -> Subscriber.restore(10L, subscriber.getEmail(), subscriber.getStatus(),
+                        subscriber.getPreferredSendHour()));
 
         var result = service.register("user@example.com", 8);
 
@@ -30,14 +29,29 @@ class SubscriberServiceTest {
 
     @Test
     void rejectsDuplicateEmail() {
-        Subscriber existing = Subscriber.restore(10L, "user@example.com", SubscriberStatus.ACTIVE, 8);
-        LoadSubscriberPort load = new LoadSubscriberPort() {
-            public Optional<Subscriber> load(Long id) { return Optional.empty(); }
-            public Optional<Subscriber> loadByEmail(String email) { return Optional.of(existing); }
-        };
-        SubscriberService service = new SubscriberService(load, subscriber -> subscriber);
+        Subscriber existing = Subscriber.restore(
+                10L, "user@example.com", SubscriberStatus.ACTIVE, 8);
+        SubscriberService service = new SubscriberService(
+                new FakeLoadSubscriberPort(Optional.empty(), Optional.of(existing)),
+                subscriber -> subscriber);
 
         assertThatThrownBy(() -> service.register("USER@example.com", 8))
-                .isInstanceOf(SubscriberException.class);
+                .isInstanceOf(ConflictException.class);
+    }
+
+    private record FakeLoadSubscriberPort(
+            Optional<Subscriber> subscriber,
+            Optional<Subscriber> subscriberByEmail
+    ) implements LoadSubscriberPort {
+
+        @Override
+        public Optional<Subscriber> load(Long subscriberId) {
+            return subscriber;
+        }
+
+        @Override
+        public Optional<Subscriber> loadByEmail(String email) {
+            return subscriberByEmail;
+        }
     }
 }

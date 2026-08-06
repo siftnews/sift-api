@@ -2,8 +2,10 @@ package com.siftnews.subscriber.adapter.out.persistence;
 
 import com.siftnews.subscriber.application.port.out.LoadSubscriberPort;
 import com.siftnews.subscriber.application.port.out.SaveSubscriberPort;
+import com.siftnews.subscriber.domain.ConflictException;
 import com.siftnews.subscriber.domain.Subscriber;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +30,29 @@ class SubscriberPersistenceAdapter implements LoadSubscriberPort, SaveSubscriber
     @Override
     @Transactional
     public Subscriber save(Subscriber subscriber) {
-        return SubscriberMapper.toDomain(repository.save(SubscriberMapper.toEntity(subscriber)));
+        try {
+            return SubscriberMapper.toDomain(
+                    repository.saveAndFlush(SubscriberMapper.toEntity(subscriber)));
+        } catch (DataIntegrityViolationException exception) {
+            if (containsConstraint(exception, "uk_subscriber_email")) {
+                throw new ConflictException("이미 등록된 email입니다.", exception);
+            }
+            throw exception;
+        }
+    }
+
+    private boolean containsConstraint(Throwable throwable, String constraintName) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof org.hibernate.exception.ConstraintViolationException violation
+                    && constraintName.equals(violation.getConstraintName())) {
+                return true;
+            }
+            if (current.getMessage() != null && current.getMessage().contains(constraintName)) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 }
