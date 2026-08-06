@@ -12,7 +12,7 @@ import java.time.ZoneOffset;
 @TestConfiguration(proxyBeanMethods = false)
 public class FixedClockTestConfig {
 
-    private static final Instant FIXED_NOW = Instant.parse("2026-08-06T06:00:00Z");
+    private static final Instant FIXED_NOW = Instant.parse("2026-08-05T21:00:00Z");
 
     @Bean
     @Primary
