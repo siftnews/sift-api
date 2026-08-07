@@ -72,10 +72,12 @@ class SubscriberConcurrencyIntegrationTest extends AbstractIntegrationTest {
         Long topicId = createTopic();
         SubscriptionSummary initial = manageSubscriptionUseCase.subscribe(subscriber.getSubscriberId(), topicId);
         manageSubscriptionUseCase.unsubscribe(subscriber.getSubscriberId(), topicId);
+        assertThat(subscriptionCount(subscriber.getSubscriberId(), topicId)).isEqualTo(1);
 
         List<String> results = runConcurrently(() -> subscribe(subscriber.getSubscriberId(), topicId));
 
         assertThat(results).containsExactlyInAnyOrder("SAVED", "CONFLICT");
+        assertThat(subscriptionCount(subscriber.getSubscriberId(), topicId)).isEqualTo(1);
         assertThat(subscriptionStatus(subscriber.getSubscriberId(), topicId)).isEqualTo("ACTIVE");
         assertThat(initial.subscriptionId()).isPositive();
     }

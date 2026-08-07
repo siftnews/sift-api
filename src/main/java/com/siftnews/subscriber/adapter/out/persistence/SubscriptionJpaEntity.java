@@ -33,6 +33,13 @@ class SubscriptionJpaEntity extends BaseEntity {
         this.status = status;
     }
 
+    SubscriptionJpaEntity(Long id, Long subscriberId, Long topicId, SubscriptionStatus status) {
+        super(id);
+        this.subscriberId = subscriberId;
+        this.topicId = topicId;
+        this.status = status;
+    }
+
     void updateStatus(SubscriptionStatus status) {
         this.status = status;
     }

@@ -24,6 +24,13 @@ import java.time.Instant;
 @EntityListeners(AuditingEntityListener.class)
 public abstract class BaseEntity {
 
+    protected BaseEntity() {
+    }
+
+    protected BaseEntity(Long id) {
+        this.id = id;
+    }
+
     // NOTE: MVP 는 IDENTITY. 대량 발송(delivery_task) 배치 insert 성능 단계에서
     //       SEQUENCE + allocationSize 전환을 검토한다(성능 로드맵 V2~).
     @Id
