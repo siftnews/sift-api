@@ -12,7 +12,7 @@ import java.util.List;
  * 두 개 생기면 안 되므로 영속 계층이 이 쌍에 UNIQUE를 걸고, 재실행은 항목을 교체한다
  * (#21·#25에서 반복된 재실행 멱등성 요구).
  * <p>
- * 선별이 만드는 것은 {@link IssueStatus#DRAFT}까지다 — 예약·발송 전이는 M3 몫이다.
+ * 선별은 발송 대기 상태인 {@link IssueStatus#SCHEDULED} 이슈를 만든다. 실제 전송 전이는 M3 sendStep 몫이다.
  */
 @Getter
 public class Issue {
@@ -39,6 +39,15 @@ public class Issue {
      * 자체가 기록이고, 호가 아예 없으면 "아직 안 돌았다"와 구분되지 않는다.
      */
     public static Issue draft(Long topicId, LocalDate runDate, String title, List<IssueItem> items) {
+        return create(topicId, runDate, title, items, IssueStatus.DRAFT);
+    }
+
+    public static Issue scheduled(Long topicId, LocalDate runDate, String title, List<IssueItem> items) {
+        return create(topicId, runDate, title, items, IssueStatus.SCHEDULED);
+    }
+
+    private static Issue create(Long topicId, LocalDate runDate, String title, List<IssueItem> items,
+                                IssueStatus status) {
         if (topicId == null) {
             throw new ContentException("이슈의 topicId는 null일 수 없습니다.");
         }
@@ -48,7 +57,7 @@ public class Issue {
         if (title == null || title.isBlank()) {
             throw new ContentException("이슈 title은 비어 있을 수 없습니다.");
         }
-        return new Issue(null, topicId, runDate, title.strip(), IssueStatus.DRAFT, requireContiguousRanks(items));
+        return new Issue(null, topicId, runDate, title.strip(), status, requireContiguousRanks(items));
     }
 
     public static Issue restore(Long issueId, Long topicId, LocalDate runDate, String title,

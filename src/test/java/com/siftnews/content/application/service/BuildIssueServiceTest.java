@@ -79,7 +79,7 @@ class BuildIssueServiceTest {
     }
 
     @Test
-    void buildsDraftIssueFromScores() {
+    void buildsScheduledIssueFromScores() {
         FakeSaveIssuePort savePort = new FakeSaveIssuePort();
         BuildIssueService service = new BuildIssueService(new FakeLoadTopicPort(devTopic(10, 0.0)),
                 new FakeLoadArticleScoresPort(List.of(score(1L, 10L, 0.4), score(2L, 20L, 0.9))), savePort);
@@ -88,7 +88,7 @@ class BuildIssueServiceTest {
 
         assertThat(issueId).isEqualTo(100L);
         Issue issue = savePort.saved.get(0);
-        assertThat(issue.getStatus()).isEqualTo(IssueStatus.DRAFT);
+        assertThat(issue.getStatus()).isEqualTo(IssueStatus.SCHEDULED);
         assertThat(issue.getRunDate()).isEqualTo(RUN_DATE);
         assertThat(issue.getItems()).extracting(IssueItem::articleId).containsExactly(2L, 1L);
     }

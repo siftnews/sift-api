@@ -19,7 +19,7 @@ spring:
       pool:
         # 기본값 1이면 수집(매시간)·선별(매일 06:00) 트리거가 한 스레드를 두고 줄을 선다 —
         # 06:00에 수집이 물려 있으면 그날 발행이 그만큼 밀린다. 트리거 수만큼 확보한다.
-        size: 2
+        size: 3
 
 sift:
   collection:
@@ -33,6 +33,10 @@ sift:
     zone: Asia/Seoul
     # 후보 윈도우 크기 — 발행이 하루 한 번이고 topic.recency_half_life_hours 기본값도 24라 정렬을 맞춘다
     window-hours: 24
+
+  delivery:
+    cron: "0 0 * * * *"
+    zone: Asia/Seoul
 
 management:
   endpoints:
