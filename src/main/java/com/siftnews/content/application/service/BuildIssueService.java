@@ -53,7 +53,7 @@ public class BuildIssueService implements BuildIssueUseCase {
         List<ArticleScore> scores = loadArticleScoresPort.loadByTopic(topicId, scoredFrom);
         List<IssueItem> items = RankSelector.select(topic, scores);
 
-        Long issueId = saveIssuePort.save(Issue.draft(topicId, runDate, titleOf(topic, runDate), items));
+        Long issueId = saveIssuePort.save(Issue.scheduled(topicId, runDate, titleOf(topic, runDate), items));
 
         // 하한을 함께 남긴다 — 조회가 0건일 때 "점수가 없는 것"과 "하한이 잘못된 것"을 로그만으로 가르기 위해서다(#35).
         log.info("이슈 생성 완료: topicId={}, runDate={}, scoredFrom={}, 점수={}건 → 게재={}건, issueId={}",

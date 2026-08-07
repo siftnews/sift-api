@@ -6,7 +6,7 @@
  */
 @ApplicationModule(
         displayName = "Delivery",
-        allowedDependencies = {"common"}
+        allowedDependencies = {"common", "content :: topic-catalog", "subscriber :: subscriber-catalog"}
 )
 package com.siftnews.delivery;
 

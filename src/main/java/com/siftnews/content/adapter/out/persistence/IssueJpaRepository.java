@@ -1,5 +1,6 @@
 package com.siftnews.content.adapter.out.persistence;
 
+import com.siftnews.content.api.ScheduledIssueReference;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -7,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 interface IssueJpaRepository extends JpaRepository<IssueJpaEntity, Long> {
@@ -35,4 +37,11 @@ interface IssueJpaRepository extends JpaRepository<IssueJpaEntity, Long> {
                 @Param("title") String title,
                 @Param("status") String status,
                 @Param("now") Instant now);
+
+    @Query("""
+            select new com.siftnews.content.api.ScheduledIssueReference(issue.id, issue.topicId)
+            from IssueJpaEntity issue
+            where issue.runDate = :runDate and issue.status = 'SCHEDULED'
+            """)
+    List<ScheduledIssueReference> findScheduled(LocalDate runDate);
 }

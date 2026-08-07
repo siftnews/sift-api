@@ -1,6 +1,8 @@
 package com.siftnews.content.adapter.out.persistence;
 
 import com.siftnews.content.application.port.out.SaveIssuePort;
+import com.siftnews.content.application.port.out.LoadScheduledIssuesPort;
+import com.siftnews.content.api.ScheduledIssueReference;
 import com.siftnews.content.domain.ContentException;
 import com.siftnews.content.domain.Issue;
 import com.siftnews.content.domain.IssueItem;
@@ -13,11 +15,16 @@ import java.util.List;
 
 @Component
 @RequiredArgsConstructor
-class IssuePersistenceAdapter implements SaveIssuePort {
+class IssuePersistenceAdapter implements SaveIssuePort, LoadScheduledIssuesPort {
 
     private final IssueJpaRepository issueJpaRepository;
     private final IssueItemJpaRepository issueItemJpaRepository;
     private final Clock clock;
+
+    @Override
+    public List<ScheduledIssueReference> loadScheduled(java.time.LocalDate runDate) {
+        return issueJpaRepository.findScheduled(runDate);
+    }
 
     @Override
     @Transactional

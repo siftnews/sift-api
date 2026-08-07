@@ -1,6 +1,8 @@
 package com.siftnews.subscriber.adapter.out.persistence;
 
 import com.siftnews.subscriber.application.port.out.LoadSubscriptionPort;
+import com.siftnews.subscriber.application.port.out.LoadTopicSubscribersPort;
+import com.siftnews.subscriber.api.DeliveryRecipient;
 import com.siftnews.subscriber.application.port.out.SaveSubscriptionPort;
 import com.siftnews.subscriber.domain.ConflictException;
 import com.siftnews.subscriber.domain.Subscription;
@@ -13,7 +15,7 @@ import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
-class SubscriptionPersistenceAdapter implements LoadSubscriptionPort, SaveSubscriptionPort {
+class SubscriptionPersistenceAdapter implements LoadSubscriptionPort, SaveSubscriptionPort, LoadTopicSubscribersPort {
 
     private final SubscriptionJpaRepository repository;
 
@@ -21,6 +23,11 @@ class SubscriptionPersistenceAdapter implements LoadSubscriptionPort, SaveSubscr
     public Optional<Subscription> load(Long subscriberId, Long topicId) {
         return repository.findBySubscriberIdAndTopicId(subscriberId, topicId)
                 .map(SubscriptionMapper::toDomain);
+    }
+
+    @Override
+    public java.util.List<DeliveryRecipient> loadActive(Long topicId, int preferredSendHour) {
+        return repository.findActiveRecipients(topicId, preferredSendHour);
     }
 
     @Override
