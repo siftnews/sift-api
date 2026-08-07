@@ -35,6 +35,11 @@ public class DeliveryTask {
                 key(issueId, subscriberId));
     }
 
+    public static DeliveryTask restore(Long taskId, Long jobId, Long subscriberId, String email,
+                                       DeliveryTaskStatus status, String key) {
+        return new DeliveryTask(taskId, jobId, subscriberId, email, status, key);
+    }
+
     private static String key(Long issueId, Long subscriberId) {
         try {
             byte[] hash = MessageDigest.getInstance("SHA-256")

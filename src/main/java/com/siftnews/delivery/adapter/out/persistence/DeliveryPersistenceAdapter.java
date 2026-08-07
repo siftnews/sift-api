@@ -1,10 +1,13 @@
 package com.siftnews.delivery.adapter.out.persistence;
 
 import com.siftnews.delivery.application.port.out.LoadDeliveryJobPort;
+import com.siftnews.delivery.application.port.out.LoadPendingDeliveryTasksPort;
 import com.siftnews.delivery.application.port.out.SaveDeliveryJobPort;
 import com.siftnews.delivery.application.port.out.SaveDeliveryTaskPort;
+import com.siftnews.delivery.application.port.out.UpdateDeliveryTaskPort;
 import com.siftnews.delivery.domain.DeliveryJob;
 import com.siftnews.delivery.domain.DeliveryTask;
+import com.siftnews.delivery.domain.DeliveryTaskStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -13,7 +16,8 @@ import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
-class DeliveryPersistenceAdapter implements LoadDeliveryJobPort, SaveDeliveryJobPort, SaveDeliveryTaskPort {
+class DeliveryPersistenceAdapter implements LoadDeliveryJobPort, SaveDeliveryJobPort, SaveDeliveryTaskPort,
+        LoadPendingDeliveryTasksPort, UpdateDeliveryTaskPort {
 
     private final DeliveryJobJpaRepository deliveryJobJpaRepository;
     private final DeliveryTaskJpaRepository deliveryTaskJpaRepository;
@@ -40,6 +44,21 @@ class DeliveryPersistenceAdapter implements LoadDeliveryJobPort, SaveDeliveryJob
                     task.getEmail(), task.getStatus().name(), task.getIdempotencyKey());
         }
         return saved;
+    }
+
+    @Override
+    public List<DeliveryTask> loadPending(Long deliveryJobId) {
+        return deliveryTaskJpaRepository.findByDeliveryJobIdAndStatusOrderByIdAsc(deliveryJobId,
+                        DeliveryTaskStatus.PENDING)
+                .stream()
+                .map(entity -> DeliveryTask.restore(entity.getId(), entity.getDeliveryJobId(),
+                        entity.getSubscriberId(), entity.getEmail(), entity.getStatus(), entity.getIdempotencyKey()))
+                .toList();
+    }
+
+    @Override
+    public void updateStatus(Long taskId, DeliveryTaskStatus status, String error) {
+        deliveryTaskJpaRepository.updateStatus(taskId, status, error);
     }
 
     private DeliveryJob toDomain(DeliveryJobJpaEntity entity) {

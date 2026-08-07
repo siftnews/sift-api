@@ -33,6 +33,9 @@ class DeliveryTaskJpaEntity extends BaseEntity {
     @Column(name = "attempt_count", nullable = false)
     private int attemptCount;
 
+    @Column(name = "last_error")
+    private String lastError;
+
     @Column(name = "idempotency_key", nullable = false, unique = true, length = 64)
     private String idempotencyKey;
 

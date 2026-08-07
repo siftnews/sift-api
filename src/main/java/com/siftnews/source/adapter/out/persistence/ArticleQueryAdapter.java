@@ -1,6 +1,7 @@
 package com.siftnews.source.adapter.out.persistence;
 
 import com.siftnews.source.api.ArticleCandidate;
+import com.siftnews.source.api.ArticleExcerpt;
 import com.siftnews.source.application.port.out.ArticleQueryPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -38,6 +39,16 @@ class ArticleQueryAdapter implements ArticleQueryPort {
             idsByClusterId.computeIfAbsent(entry.getValue(), key -> new ArrayList<>()).add(entry.getKey());
         }
         idsByClusterId.forEach(articleJpaRepository::updateDedupClusterId);
+    }
+
+    @Override
+    public List<ArticleExcerpt> findByIds(List<Long> articleIds) {
+        if (articleIds.isEmpty()) {
+            return List.of();
+        }
+        return articleJpaRepository.findByIdIn(articleIds).stream()
+                .map(article -> new ArticleExcerpt(article.getId(), article.getTitle(), article.getUrl()))
+                .toList();
     }
 
     private static ArticleCandidate toCandidate(ArticleJpaEntity entity) {

@@ -2,6 +2,7 @@ package com.siftnews.source.application.service;
 
 import com.siftnews.source.api.ArticleCandidate;
 import com.siftnews.source.api.ArticleCatalog;
+import com.siftnews.source.api.ArticleExcerpt;
 import com.siftnews.source.application.port.out.ArticleQueryPort;
 import com.siftnews.source.domain.ArticleException;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,11 @@ public class ArticleCatalogService implements ArticleCatalog {
             throw new ArticleException("from은 to보다 앞서야 합니다: from=" + from + ", to=" + to);
         }
         return articleQueryPort.findCandidates(from, to);
+    }
+
+    @Override
+    public List<ArticleExcerpt> findByIds(List<Long> articleIds) {
+        return articleIds == null || articleIds.isEmpty() ? List.of() : articleQueryPort.findByIds(articleIds);
     }
 
     @Override

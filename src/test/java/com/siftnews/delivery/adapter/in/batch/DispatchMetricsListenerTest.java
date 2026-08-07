@@ -48,4 +48,24 @@ class DispatchMetricsListenerTest {
         assertThat(meterRegistry.find("sift.delivery.dispatch.duration").tag("status", "COMPLETED").timer())
                 .isNotNull();
     }
+
+    @Test
+    void recordsSendDurationAndProcessedTaskCount() {
+        SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+        DispatchMetricsListener listener = new DispatchMetricsListener(meterRegistry);
+        JobExecution jobExecution = new JobExecution(new JobInstance(1L, "dispatchJob"), new JobParameters());
+        StepExecution stepExecution = new StepExecution("sendStep", jobExecution);
+        stepExecution.setStartTime(LocalDateTime.parse("2026-08-07T09:00:00"));
+        stepExecution.setEndTime(LocalDateTime.parse("2026-08-07T09:00:02"));
+        stepExecution.setExitStatus(ExitStatus.COMPLETED);
+        stepExecution.setWriteCount(3);
+
+        listener.afterStep(stepExecution);
+
+        assertThat(meterRegistry.find("sift.delivery.send.duration").tag("status", "COMPLETED").timer())
+                .isNotNull();
+        assertThat(meterRegistry.find("sift.delivery.tasks.processed").tag("status", "COMPLETED").counter().count())
+                .isEqualTo(3.0);
+        assertThat(meterRegistry.find("sift.delivery.snapshot.duration").timer()).isNull();
+    }
 }
