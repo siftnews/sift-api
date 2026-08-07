@@ -1,7 +1,12 @@
 package com.siftnews.delivery.application.service;
 
-import com.siftnews.delivery.application.port.out.*;
-import com.siftnews.delivery.domain.*;
+import com.siftnews.delivery.application.port.out.LoadDeliveryJobPort;
+import com.siftnews.delivery.application.port.out.SaveDeliveryJobPort;
+import com.siftnews.delivery.application.port.out.SaveDeliveryTaskPort;
+import com.siftnews.delivery.domain.DeliveryJob;
+import com.siftnews.delivery.domain.DeliveryJobStatus;
+import com.siftnews.delivery.domain.DeliveryTask;
+import com.siftnews.delivery.domain.DeliveryTaskStatus;
 import com.siftnews.subscriber.api.DeliveryRecipient;
 import com.siftnews.subscriber.api.SubscriberCatalog;
 import org.junit.jupiter.api.Test;
@@ -19,9 +24,10 @@ class DispatchIssueServiceTest {
         SubscriberCatalog recipients = (topicId, hour) -> List.of(new DeliveryRecipient(7L, "reader@example.com"));
         DispatchIssueService service = new DispatchIssueService(jobs, jobs, tasks, recipients);
 
-        Long jobId = service.dispatch(3L, 2L, 9);
+        var summary = service.dispatch(3L, 2L, 9);
 
-        assertThat(jobId).isEqualTo(1L);
+        assertThat(summary.deliveryJobId()).isEqualTo(1L);
+        assertThat(summary.createdTaskCount()).isEqualTo(1);
         assertThat(tasks.saved).singleElement().satisfies(task -> {
             assertThat(task.getSubscriberId()).isEqualTo(7L);
             assertThat(task.getStatus()).isEqualTo(DeliveryTaskStatus.PENDING);

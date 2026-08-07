@@ -6,7 +6,6 @@ import com.siftnews.delivery.application.port.out.SaveDeliveryTaskPort;
 import com.siftnews.delivery.domain.DeliveryJob;
 import com.siftnews.delivery.domain.DeliveryTask;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -26,25 +25,19 @@ class DeliveryPersistenceAdapter implements LoadDeliveryJobPort, SaveDeliveryJob
 
     @Override
     public DeliveryJob save(DeliveryJob deliveryJob) {
-        try {
-            return toDomain(deliveryJobJpaRepository.saveAndFlush(
-                    new DeliveryJobJpaEntity(deliveryJob.getIssueId(), deliveryJob.getTotalCount(), deliveryJob.getStatus())));
-        } catch (DataIntegrityViolationException exception) {
-            return loadByIssueId(deliveryJob.getIssueId()).orElseThrow(() -> exception);
-        }
+        deliveryJobJpaRepository.insertIfAbsent(deliveryJob.getIssueId(), deliveryJob.getTotalCount(),
+                deliveryJob.getStatus().name());
+        return loadByIssueId(deliveryJob.getIssueId())
+                .orElseThrow(() -> new IllegalStateException("delivery job 저장 후 조회할 수 없습니다: issueId="
+                        + deliveryJob.getIssueId()));
     }
 
     @Override
     public int saveIfAbsent(List<DeliveryTask> deliveryTasks) {
         int saved = 0;
         for (DeliveryTask task : deliveryTasks) {
-            try {
-                deliveryTaskJpaRepository.saveAndFlush(new DeliveryTaskJpaEntity(task.getDeliveryJobId(),
-                        task.getSubscriberId(), task.getEmail(), task.getStatus(), task.getIdempotencyKey()));
-                saved++;
-            } catch (DataIntegrityViolationException ignored) {
-                // UNIQUE(issue_id, subscriber_id)에서 나온 멱등 키 충돌은 재실행의 정상 결과다.
-            }
+            saved += deliveryTaskJpaRepository.insertIfAbsent(task.getDeliveryJobId(), task.getSubscriberId(),
+                    task.getEmail(), task.getStatus().name(), task.getIdempotencyKey());
         }
         return saved;
     }

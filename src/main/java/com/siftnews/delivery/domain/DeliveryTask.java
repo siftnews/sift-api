@@ -41,7 +41,7 @@ public class DeliveryTask {
                     .digest((issueId + ":" + subscriberId).getBytes(StandardCharsets.UTF_8));
             return java.util.HexFormat.of().formatHex(hash);
         } catch (NoSuchAlgorithmException exception) {
-            throw new IllegalStateException("SHA-256을 사용할 수 없습니다.", exception);
+            throw new BusinessException("SHA-256을 사용할 수 없습니다.", exception);
         }
     }
 }

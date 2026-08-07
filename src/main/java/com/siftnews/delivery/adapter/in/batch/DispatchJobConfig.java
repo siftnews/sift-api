@@ -2,6 +2,7 @@ package com.siftnews.delivery.adapter.in.batch;
 
 import com.siftnews.delivery.application.port.in.DispatchIssueUseCase;
 import org.springframework.batch.core.Job;
+import org.springframework.batch.core.JobParametersValidator;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.builder.JobBuilder;
@@ -19,17 +20,21 @@ import org.springframework.transaction.PlatformTransactionManager;
 class DispatchJobConfig {
 
     @Bean
-    Job dispatchJob(JobRepository jobRepository, Step snapshotStep) {
+    Job dispatchJob(JobRepository jobRepository, Step snapshotStep, JobParametersValidator dispatchJobParametersValidator,
+                    DispatchMetricsListener metricsListener) {
         return new JobBuilder("dispatchJob", jobRepository)
+                .validator(dispatchJobParametersValidator)
+                .listener(metricsListener)
                 .start(snapshotStep)
                 .build();
     }
 
     @Bean
     Step snapshotStep(JobRepository jobRepository, PlatformTransactionManager transactionManager,
-                      Tasklet snapshotTasklet) {
+                      Tasklet snapshotTasklet, DispatchMetricsListener metricsListener) {
         return new StepBuilder("snapshotStep", jobRepository)
                 .tasklet(snapshotTasklet, transactionManager)
+                .listener(metricsListener)
                 .build();
     }
 
@@ -40,8 +45,20 @@ class DispatchJobConfig {
                             @Value("#{jobParameters['" + DispatchJobParameters.TOPIC_ID + "']}") Long topicId,
                             @Value("#{jobParameters['" + DispatchJobParameters.SEND_HOUR + "']}") Long sendHour) {
         return (contribution, chunkContext) -> {
-            dispatchIssueUseCase.dispatch(issueId, topicId, sendHour.intValue());
+            var summary = dispatchIssueUseCase.dispatch(issueId, topicId, sendHour.intValue());
+            contribution.getStepExecution().getExecutionContext()
+                    .putInt(DispatchMetricsListener.CREATED_TASK_COUNT, summary.createdTaskCount());
             return RepeatStatus.FINISHED;
         };
+    }
+
+    @Bean
+    JobParametersValidator dispatchJobParametersValidator() {
+        return new DispatchJobParametersValidator();
+    }
+
+    @Bean
+    DispatchMetricsListener dispatchMetricsListener(io.micrometer.core.instrument.MeterRegistry meterRegistry) {
+        return new DispatchMetricsListener(meterRegistry);
     }
 }

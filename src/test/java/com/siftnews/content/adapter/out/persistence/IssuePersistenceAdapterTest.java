@@ -77,6 +77,19 @@ class IssuePersistenceAdapterTest extends AbstractIntegrationTest {
         assertThat(issueItemJpaRepository.findByIssueIdOrderByRankAsc(first)).hasSize(1);
     }
 
+    @Test
+    void rerunPromotesDraftIssueToScheduled() {
+        Long issueId = saveIssuePort.save(issue(List.of(new IssueItem(11L, 1, 0.9))));
+
+        saveIssuePort.save(Issue.scheduled(TOPIC_ID, RUN_DATE, "개발 2026-07-27", List.of()));
+
+        entityManager.clear();
+        assertThat(issueJpaRepository.findById(issueId).orElseThrow().getStatus()).isEqualTo(IssueStatus.SCHEDULED);
+        assertThat(issueJpaRepository.findScheduled(RUN_DATE))
+                .extracting(reference -> reference.issueId())
+                .containsExactly(issueId);
+    }
+
     /** 재실행은 게재 목록을 통째로 교체한다 — 남겨 두면 이전 실행의 기사가 그대로 실린다. */
     @Test
     void rerunReplacesItemsEntirely() {
