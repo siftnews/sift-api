@@ -13,6 +13,10 @@ final class SubscriptionMapper {
     }
 
     static SubscriptionJpaEntity toEntity(Subscription subscription) {
+        if (subscription.getSubscriptionId() != null) {
+            return new SubscriptionJpaEntity(subscription.getSubscriptionId(),
+                    subscription.getSubscriberId(), subscription.getTopicId(), subscription.getStatus());
+        }
         return new SubscriptionJpaEntity(subscription.getSubscriberId(), subscription.getTopicId(),
                 subscription.getStatus());
     }
