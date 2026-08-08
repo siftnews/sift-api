@@ -99,6 +99,20 @@ class DispatchJobIntegrationTest extends AbstractIntegrationTest {
                 taskId)).isNotNull();
     }
 
+    @Test
+    void recordsFailedTransitionAndError() {
+        dispatchIssueUseCase.dispatch(ISSUE_ID, TOPIC_ID, SEND_HOUR);
+        Long taskId = jdbcTemplate.queryForObject("select id from delivery_task where subscriber_id = ?",
+                Long.class, SUBSCRIBER_ID);
+
+        assertThat(updateDeliveryTaskPort.claimPending(taskId)).isEqualTo(1);
+        assertThat(updateDeliveryTaskPort.markFailed(taskId, "smtp unavailable")).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("select status from delivery_task where id = ?", String.class,
+                taskId)).isEqualTo("FAILED");
+        assertThat(jdbcTemplate.queryForObject("select last_error from delivery_task where id = ?", String.class,
+                taskId)).isEqualTo("smtp unavailable");
+    }
+
     private void prepareDispatchTarget() {
         deleteDispatchTarget();
 
