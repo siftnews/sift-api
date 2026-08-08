@@ -38,4 +38,25 @@ class RetryMetricsListenerTest {
         assertThat(meterRegistry.find("sift.delivery.retry.job.duration")
                 .tag("status", "COMPLETED").timer()).isNotNull();
     }
+
+    @Test
+    void marksRetryStepAsPartialFailureAndCountsFailedTasks() {
+        SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+        RetryMetricsListener listener = new RetryMetricsListener(meterRegistry);
+        JobExecution jobExecution = new JobExecution(new JobInstance(1L, "retryJob"), new JobParameters());
+        StepExecution stepExecution = new StepExecution("retryStep", jobExecution);
+        stepExecution.setStartTime(LocalDateTime.parse("2026-08-08T03:00:00"));
+        stepExecution.setEndTime(LocalDateTime.parse("2026-08-08T03:00:02"));
+        stepExecution.setWriteCount(4);
+        stepExecution.setExitStatus(org.springframework.batch.core.ExitStatus.COMPLETED);
+        stepExecution.getExecutionContext().putInt(DeliveryEmailWriter.FAILED_TASK_COUNT, 2);
+
+        var exitStatus = listener.afterStep(stepExecution);
+
+        assertThat(exitStatus.getExitCode()).isEqualTo("COMPLETED_WITH_ERRORS");
+        assertThat(meterRegistry.find("sift.delivery.retry.tasks.processed")
+                .tag("status", "COMPLETED_WITH_ERRORS").counter().count()).isEqualTo(4.0);
+        assertThat(meterRegistry.find("sift.delivery.retry.tasks.failed")
+                .tag("status", "COMPLETED_WITH_ERRORS").counter().count()).isEqualTo(2.0);
+    }
 }
