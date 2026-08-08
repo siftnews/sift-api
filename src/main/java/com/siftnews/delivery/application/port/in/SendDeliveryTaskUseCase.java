@@ -4,5 +4,5 @@ import com.siftnews.delivery.domain.DeliveryTask;
 
 public interface SendDeliveryTaskUseCase {
 
-    void send(DeliveryTask task);
+    SendDeliveryTaskResult send(DeliveryTask task);
 }

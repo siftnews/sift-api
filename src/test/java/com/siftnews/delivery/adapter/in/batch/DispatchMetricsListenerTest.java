@@ -68,4 +68,25 @@ class DispatchMetricsListenerTest {
                 .isEqualTo(3.0);
         assertThat(meterRegistry.find("sift.delivery.snapshot.duration").timer()).isNull();
     }
+
+    @Test
+    void marksSendStepAsPartialFailureAndCountsFailedTasks() {
+        SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+        DispatchMetricsListener listener = new DispatchMetricsListener(meterRegistry);
+        JobExecution jobExecution = new JobExecution(new JobInstance(1L, "dispatchJob"), new JobParameters());
+        StepExecution stepExecution = new StepExecution("sendStep", jobExecution);
+        stepExecution.setStartTime(LocalDateTime.parse("2026-08-07T09:00:00"));
+        stepExecution.setEndTime(LocalDateTime.parse("2026-08-07T09:00:02"));
+        stepExecution.setExitStatus(ExitStatus.COMPLETED);
+        stepExecution.setWriteCount(3);
+        stepExecution.getExecutionContext().putInt(DeliveryEmailWriter.FAILED_TASK_COUNT, 1);
+
+        ExitStatus exitStatus = listener.afterStep(stepExecution);
+
+        assertThat(exitStatus.getExitCode()).isEqualTo("COMPLETED_WITH_ERRORS");
+        assertThat(meterRegistry.find("sift.delivery.tasks.processed")
+                .tag("status", "COMPLETED_WITH_ERRORS").counter().count()).isEqualTo(3.0);
+        assertThat(meterRegistry.find("sift.delivery.tasks.failed")
+                .tag("status", "COMPLETED_WITH_ERRORS").counter().count()).isEqualTo(1.0);
+    }
 }

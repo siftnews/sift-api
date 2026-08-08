@@ -1,6 +1,7 @@
 package com.siftnews.delivery.adapter.in.batch;
 
 import com.siftnews.delivery.application.port.in.SendDeliveryTaskUseCase;
+import com.siftnews.delivery.application.port.in.SendDeliveryTaskResult;
 import com.siftnews.delivery.domain.DeliveryTask;
 import com.siftnews.delivery.domain.DeliveryTaskStatus;
 import org.junit.jupiter.api.Test;
@@ -34,8 +35,9 @@ class DeliveryEmailWriterTest {
         private final List<DeliveryTask> tasks = new ArrayList<>();
 
         @Override
-        public void send(DeliveryTask task) {
+        public SendDeliveryTaskResult send(DeliveryTask task) {
             tasks.add(task);
+            return SendDeliveryTaskResult.SENT;
         }
     }
 }

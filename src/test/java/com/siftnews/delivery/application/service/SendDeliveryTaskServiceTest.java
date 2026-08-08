@@ -4,6 +4,7 @@ import com.siftnews.content.api.IssueCatalog;
 import com.siftnews.content.api.NewsletterArticle;
 import com.siftnews.content.api.NewsletterIssue;
 import com.siftnews.content.api.ScheduledIssueReference;
+import com.siftnews.delivery.application.port.in.SendDeliveryTaskResult;
 import com.siftnews.delivery.application.port.out.SendEmailPort;
 import com.siftnews.delivery.application.port.out.UpdateDeliveryTaskPort;
 import com.siftnews.delivery.domain.DeliveryException;
@@ -29,7 +30,8 @@ class SendDeliveryTaskServiceTest {
         RecordingEmailSender sender = new RecordingEmailSender(false);
         SendDeliveryTaskService service = new SendDeliveryTaskService(issueCatalog(), sender, updates);
 
-        service.send(task(101L, "reader@example.com"));
+        assertThat(service.send(task(101L, "reader@example.com")))
+                .isEqualTo(SendDeliveryTaskResult.SENT);
 
         assertThat(sender.sent).singleElement().satisfies(email -> {
             assertThat(email.recipient()).isEqualTo("reader@example.com");
@@ -47,7 +49,8 @@ class SendDeliveryTaskServiceTest {
         RecordingEmailSender sender = new RecordingEmailSender(false);
         SendDeliveryTaskService service = new SendDeliveryTaskService(issueCatalog(), sender, updates);
 
-        service.send(task(102L, "reader@example.com"));
+        assertThat(service.send(task(102L, "reader@example.com")))
+                .isEqualTo(SendDeliveryTaskResult.CLAIM_SKIPPED);
 
         assertThat(sender.sent).isEmpty();
         assertThat(updates.operations).containsExactly("claim:102");
@@ -59,7 +62,8 @@ class SendDeliveryTaskServiceTest {
         RecordingEmailSender sender = new RecordingEmailSender(true);
         SendDeliveryTaskService service = new SendDeliveryTaskService(issueCatalog(), sender, updates);
 
-        service.send(task(103L, "private@example.com"));
+        assertThat(service.send(task(103L, "private@example.com")))
+                .isEqualTo(SendDeliveryTaskResult.FAILED);
 
         assertThat(updates.failedError).isEqualTo(
                 "메일 발송 실패: category=SMTP, causeType=IllegalStateException");

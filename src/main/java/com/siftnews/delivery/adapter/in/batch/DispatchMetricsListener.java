@@ -27,7 +27,8 @@ class DispatchMetricsListener implements StepExecutionListener, JobExecutionList
     @Override
     public ExitStatus afterStep(StepExecution stepExecution) {
         Duration elapsed = elapsed(stepExecution.getStartTime(), stepExecution.getEndTime());
-        String status = stepExecution.getExitStatus().getExitCode();
+        ExitStatus exitStatus = partialFailureStatus(stepExecution);
+        String status = exitStatus.getExitCode();
         if ("snapshotStep".equals(stepExecution.getStepName())) {
             Timer.builder("sift.delivery.snapshot.duration")
                     .tag("status", status)
@@ -42,6 +43,9 @@ class DispatchMetricsListener implements StepExecutionListener, JobExecutionList
                     .record(elapsed);
             meterRegistry.counter("sift.delivery.tasks.processed", "status", status)
                     .increment(stepExecution.getWriteCount());
+            meterRegistry.counter("sift.delivery.tasks.failed", "status", status)
+                    .increment(stepExecution.getExecutionContext()
+                            .getInt(DeliveryEmailWriter.FAILED_TASK_COUNT, 0));
         }
         log.info("[measure] step={} status={} elapsedMs={}", stepExecution.getStepName(),
                 status, elapsed.toMillis());
@@ -49,7 +53,7 @@ class DispatchMetricsListener implements StepExecutionListener, JobExecutionList
             log.warn("[measure] step={} 실패 원인={}", stepExecution.getStepName(),
                     stepExecution.getFailureExceptions().get(0).toString());
         }
-        return stepExecution.getExitStatus();
+        return exitStatus;
     }
 
     @Override
@@ -66,5 +70,17 @@ class DispatchMetricsListener implements StepExecutionListener, JobExecutionList
 
     private static Duration elapsed(LocalDateTime start, LocalDateTime end) {
         return start == null || end == null ? Duration.ZERO : Duration.between(start, end);
+    }
+
+    private static ExitStatus partialFailureStatus(StepExecution stepExecution) {
+        ExitStatus exitStatus = stepExecution.getExitStatus();
+        int failedTaskCount = stepExecution.getExecutionContext()
+                .getInt(DeliveryEmailWriter.FAILED_TASK_COUNT, 0);
+        if ("sendStep".equals(stepExecution.getStepName())
+                && failedTaskCount > 0
+                && ExitStatus.COMPLETED.getExitCode().equals(exitStatus.getExitCode())) {
+            return new ExitStatus("COMPLETED_WITH_ERRORS", "failedTasks=" + failedTaskCount);
+        }
+        return exitStatus;
     }
 }

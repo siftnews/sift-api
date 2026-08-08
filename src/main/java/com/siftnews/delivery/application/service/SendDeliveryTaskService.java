@@ -1,6 +1,7 @@
 package com.siftnews.delivery.application.service;
 
 import com.siftnews.content.api.IssueCatalog;
+import com.siftnews.delivery.application.port.in.SendDeliveryTaskResult;
 import com.siftnews.delivery.application.port.in.SendDeliveryTaskUseCase;
 import com.siftnews.delivery.application.port.out.SendEmailPort;
 import com.siftnews.delivery.application.port.out.UpdateDeliveryTaskPort;
@@ -19,9 +20,9 @@ public class SendDeliveryTaskService implements SendDeliveryTaskUseCase {
     private final HtmlEmailRenderer renderer = new HtmlEmailRenderer();
 
     @Override
-    public void send(DeliveryTask task) {
+    public SendDeliveryTaskResult send(DeliveryTask task) {
         if (updateDeliveryTaskPort.claimPending(task.getDeliveryTaskId()) != 1) {
-            return;
+            return SendDeliveryTaskResult.CLAIM_SKIPPED;
         }
 
         try {
@@ -31,12 +32,13 @@ public class SendDeliveryTaskService implements SendDeliveryTaskUseCase {
             sendEmailPort.send(task.getEmail(), issue.title(), renderer.render(issue));
         } catch (RuntimeException exception) {
             markFailed(task, exception);
-            return;
+            return SendDeliveryTaskResult.FAILED;
         }
 
         if (updateDeliveryTaskPort.markSent(task.getDeliveryTaskId()) != 1) {
             throw new IllegalStateException("SENT 상태 전이에 실패했습니다: taskId=" + task.getDeliveryTaskId());
         }
+        return SendDeliveryTaskResult.SENT;
     }
 
     private void markFailed(DeliveryTask task, RuntimeException exception) {
