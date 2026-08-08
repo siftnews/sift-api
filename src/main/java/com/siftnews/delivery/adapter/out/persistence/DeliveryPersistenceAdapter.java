@@ -123,8 +123,8 @@ class DeliveryPersistenceAdapter implements LoadDeliveryJobPort, SaveDeliveryJob
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public int markDead(Long taskId, String error) {
-        return deliveryTaskJpaRepository.markDead(taskId, error);
+    public int markDead(Long taskId, String error, int attemptCount) {
+        return deliveryTaskJpaRepository.markDead(taskId, error, attemptCount);
     }
 
     private DeliveryJob toDomain(DeliveryJobJpaEntity entity) {

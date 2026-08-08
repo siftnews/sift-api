@@ -70,7 +70,7 @@ public class SendDeliveryTaskService implements SendDeliveryTaskUseCase {
             }
             return;
         }
-        if (updateDeliveryTaskPort.markDead(task.getDeliveryTaskId(), error) != 1) {
+        if (updateDeliveryTaskPort.markDead(task.getDeliveryTaskId(), error, nextAttemptCount) != 1) {
             throw new IllegalStateException("DEAD 상태 전이에 실패했습니다: taskId="
                     + task.getDeliveryTaskId());
         }

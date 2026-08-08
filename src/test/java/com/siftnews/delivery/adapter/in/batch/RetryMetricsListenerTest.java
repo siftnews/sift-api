@@ -3,6 +3,7 @@ package com.siftnews.delivery.adapter.in.batch;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.core.BatchStatus;
+import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobInstance;
 import org.springframework.batch.core.JobParameters;
@@ -23,10 +24,11 @@ class RetryMetricsListenerTest {
         stepExecution.setStartTime(LocalDateTime.parse("2026-08-08T03:00:00"));
         stepExecution.setEndTime(LocalDateTime.parse("2026-08-08T03:00:02"));
         stepExecution.setWriteCount(4);
-        stepExecution.setExitStatus(org.springframework.batch.core.ExitStatus.COMPLETED);
+        stepExecution.setExitStatus(ExitStatus.COMPLETED);
         jobExecution.setStartTime(LocalDateTime.parse("2026-08-08T03:00:00"));
         jobExecution.setEndTime(LocalDateTime.parse("2026-08-08T03:00:02"));
         jobExecution.setStatus(BatchStatus.COMPLETED);
+        jobExecution.setExitStatus(ExitStatus.COMPLETED);
 
         listener.afterStep(stepExecution);
         listener.afterJob(jobExecution);
@@ -40,6 +42,22 @@ class RetryMetricsListenerTest {
     }
 
     @Test
+    void recordsJobExitStatusRatherThanBatchStatus() {
+        SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+        RetryMetricsListener listener = new RetryMetricsListener(meterRegistry);
+        JobExecution jobExecution = new JobExecution(new JobInstance(2L, "retryJob"), new JobParameters());
+        jobExecution.setStartTime(LocalDateTime.parse("2026-08-08T03:00:00"));
+        jobExecution.setEndTime(LocalDateTime.parse("2026-08-08T03:00:02"));
+        jobExecution.setStatus(BatchStatus.COMPLETED);
+        jobExecution.setExitStatus(new ExitStatus("COMPLETED_WITH_ERRORS"));
+
+        listener.afterJob(jobExecution);
+
+        assertThat(meterRegistry.find("sift.delivery.retry.job.duration")
+                .tag("status", "COMPLETED_WITH_ERRORS").timer()).isNotNull();
+    }
+
+    @Test
     void marksRetryStepAsPartialFailureAndCountsFailedTasks() {
         SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
         RetryMetricsListener listener = new RetryMetricsListener(meterRegistry);
@@ -48,7 +66,7 @@ class RetryMetricsListenerTest {
         stepExecution.setStartTime(LocalDateTime.parse("2026-08-08T03:00:00"));
         stepExecution.setEndTime(LocalDateTime.parse("2026-08-08T03:00:02"));
         stepExecution.setWriteCount(4);
-        stepExecution.setExitStatus(org.springframework.batch.core.ExitStatus.COMPLETED);
+        stepExecution.setExitStatus(ExitStatus.COMPLETED);
         stepExecution.getExecutionContext().putInt(DeliveryEmailWriter.FAILED_TASK_COUNT, 2);
 
         var exitStatus = listener.afterStep(stepExecution);

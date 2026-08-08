@@ -36,7 +36,8 @@ class RetryTrigger {
         log.info("retryJob 시작: launchedAt={}", parameters.getLong(RetryJobParameters.LAUNCHED_AT));
         try {
             var execution = jobLauncher.run(retryJob, parameters);
-            log.info("retryJob 종료: executionId={} status={}", execution.getId(), execution.getStatus());
+            log.info("retryJob 종료: executionId={} status={}", execution.getId(),
+                    execution.getExitStatus().getExitCode());
         } catch (Exception exception) {
             log.error("retryJob 기동 실패 — 다음 주기에 다시 시도한다", exception);
         }

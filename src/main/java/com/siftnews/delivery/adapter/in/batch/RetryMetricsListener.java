@@ -47,7 +47,7 @@ class RetryMetricsListener implements StepExecutionListener, JobExecutionListene
     @Override
     public void afterJob(JobExecution jobExecution) {
         Duration elapsed = elapsed(jobExecution.getStartTime(), jobExecution.getEndTime());
-        String status = jobExecution.getStatus().name();
+        String status = jobExecution.getExitStatus().getExitCode();
         Timer.builder("sift.delivery.retry.job.duration")
                 .tag("status", status)
                 .register(meterRegistry)
