@@ -1,7 +1,10 @@
 package com.siftnews.content.adapter.out.persistence;
 
-import com.siftnews.content.application.port.out.SaveIssuePort;
+import com.siftnews.content.application.port.out.LoadNewsletterIssuePort;
 import com.siftnews.content.application.port.out.LoadScheduledIssuesPort;
+import com.siftnews.content.application.port.out.NewsletterIssueData;
+import com.siftnews.content.application.port.out.NewsletterIssueItemData;
+import com.siftnews.content.application.port.out.SaveIssuePort;
 import com.siftnews.content.api.ScheduledIssueReference;
 import com.siftnews.content.domain.ContentException;
 import com.siftnews.content.domain.Issue;
@@ -11,19 +14,30 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
-class IssuePersistenceAdapter implements SaveIssuePort, LoadScheduledIssuesPort {
+class IssuePersistenceAdapter implements SaveIssuePort, LoadScheduledIssuesPort, LoadNewsletterIssuePort {
 
     private final IssueJpaRepository issueJpaRepository;
     private final IssueItemJpaRepository issueItemJpaRepository;
     private final Clock clock;
 
     @Override
-    public List<ScheduledIssueReference> loadScheduled(java.time.LocalDate runDate) {
+    public List<ScheduledIssueReference> loadScheduled(LocalDate runDate) {
         return issueJpaRepository.findScheduled(runDate);
+    }
+
+    @Override
+    public Optional<NewsletterIssueData> loadNewsletterIssue(Long issueId) {
+        return issueJpaRepository.findById(issueId)
+                .map(issue -> new NewsletterIssueData(issue.getId(), issue.getTitle(),
+                        issueItemJpaRepository.findByIssueIdOrderByRankAsc(issueId).stream()
+                                .map(item -> new NewsletterIssueItemData(item.getArticleId(), item.getRank()))
+                                .toList()));
     }
 
     @Override

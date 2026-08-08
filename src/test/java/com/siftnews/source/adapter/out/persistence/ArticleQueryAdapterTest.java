@@ -5,6 +5,7 @@ import com.siftnews.content.application.port.out.UpdateArticleClusterPort;
 import com.siftnews.content.domain.CandidateArticle;
 import com.siftnews.source.api.ArticleCandidate;
 import com.siftnews.source.api.ArticleCatalog;
+import com.siftnews.source.api.ArticleExcerpt;
 import com.siftnews.source.domain.Category;
 import com.siftnews.support.AbstractIntegrationTest;
 import com.siftnews.support.TestDatabaseFixtures;
@@ -15,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -137,6 +139,24 @@ class ArticleQueryAdapterTest extends AbstractIntegrationTest {
         updateArticleClusterPort.updateClusters(Map.of());
 
         assertThat(articleCatalog.findCandidates(FROM, TO)).isEmpty();
+    }
+
+    @Test
+    void bulkLookupOmitsMissingIdsAndPreservesDistinctInputOrder() {
+        Long first = saveArticleCreatedAt("lookup-first", FROM.plusSeconds(10));
+        Long second = saveArticleCreatedAt("lookup-second", FROM.plusSeconds(20));
+
+        List<ArticleExcerpt> found = articleCatalog.findByIds(
+                Arrays.asList(second, null, 999_999_999L, first, second));
+
+        assertThat(found).extracting(ArticleExcerpt::articleId)
+                .containsExactly(second, first);
+    }
+
+    @Test
+    void bulkLookupReturnsEmptyForNullOrEmptyInput() {
+        assertThat(articleCatalog.findByIds(null)).isEmpty();
+        assertThat(articleCatalog.findByIds(List.of())).isEmpty();
     }
 
     @Test

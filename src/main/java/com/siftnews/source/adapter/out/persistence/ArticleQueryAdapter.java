@@ -1,6 +1,7 @@
 package com.siftnews.source.adapter.out.persistence;
 
 import com.siftnews.source.api.ArticleCandidate;
+import com.siftnews.source.api.ArticleExcerpt;
 import com.siftnews.source.application.port.out.ArticleQueryPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -11,6 +12,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -38,6 +42,27 @@ class ArticleQueryAdapter implements ArticleQueryPort {
             idsByClusterId.computeIfAbsent(entry.getValue(), key -> new ArrayList<>()).add(entry.getKey());
         }
         idsByClusterId.forEach(articleJpaRepository::updateDedupClusterId);
+    }
+
+    @Override
+    public List<ArticleExcerpt> findByIds(List<Long> articleIds) {
+        if (articleIds == null || articleIds.isEmpty()) {
+            return List.of();
+        }
+        List<Long> requestedIds = articleIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (requestedIds.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, ArticleExcerpt> foundById = articleJpaRepository.findByIdIn(requestedIds).stream()
+                .map(article -> new ArticleExcerpt(article.getId(), article.getTitle(), article.getUrl()))
+                .collect(Collectors.toMap(ArticleExcerpt::articleId, Function.identity(), (first, ignored) -> first));
+        return requestedIds.stream()
+                .map(foundById::get)
+                .filter(Objects::nonNull)
+                .toList();
     }
 
     private static ArticleCandidate toCandidate(ArticleJpaEntity entity) {

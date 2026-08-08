@@ -1,6 +1,7 @@
 package com.siftnews.source.api;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -15,7 +16,7 @@ public interface ArticleCatalog {
      * 조회 기준으로 쓰면 null인 기사가 영원히 후보에 들지 못하고, 뒤늦게 수집된 과거 기사도
      * 누락된다 (D-032).
      */
-    java.util.List<ArticleCandidate> findCandidates(Instant from, Instant to);
+    List<ArticleCandidate> findCandidates(Instant from, Instant to);
 
     /**
      * dedup 클러스터 id를 벌크로 교체한다 — <b>값이 null이면 해제</b>다.
@@ -24,4 +25,12 @@ public interface ArticleCatalog {
      * 호출에 섞여 들어온다. 건별 호출로 쪼개면 실행 도중 중단 시 일부만 반영된 상태가 남는다.
      */
     void updateDedupClusters(Map<Long, String> clusterIdsByArticleId);
+
+    /**
+     * 기사 ID를 벌크 조회한다.
+     * <p>
+     * null 또는 빈 입력은 빈 목록을 반환한다. 존재하지 않는 ID와 null ID는 결과에서 제외하고,
+     * 중복 ID는 첫 등장만 유지한다. 반환 순서는 입력의 첫 등장 순서를 따른다.
+     */
+    List<ArticleExcerpt> findByIds(List<Long> articleIds);
 }

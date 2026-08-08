@@ -2,6 +2,7 @@ package com.siftnews.source.application.service;
 
 import com.siftnews.source.api.ArticleCandidate;
 import com.siftnews.source.api.ArticleCatalog;
+import com.siftnews.source.api.ArticleExcerpt;
 import com.siftnews.source.application.port.out.ArticleQueryPort;
 import com.siftnews.source.domain.ArticleException;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,9 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * named interface {@link ArticleCatalog}의 구현 — 다른 모듈의 호출을 받는 인바운드 유스케이스다.
@@ -32,6 +36,26 @@ public class ArticleCatalogService implements ArticleCatalog {
             throw new ArticleException("from은 to보다 앞서야 합니다: from=" + from + ", to=" + to);
         }
         return articleQueryPort.findCandidates(from, to);
+    }
+
+    @Override
+    public List<ArticleExcerpt> findByIds(List<Long> articleIds) {
+        if (articleIds == null || articleIds.isEmpty()) {
+            return List.of();
+        }
+        List<Long> requestedIds = articleIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (requestedIds.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, ArticleExcerpt> foundById = articleQueryPort.findByIds(requestedIds).stream()
+                .collect(Collectors.toMap(ArticleExcerpt::articleId, Function.identity(), (first, ignored) -> first));
+        return requestedIds.stream()
+                .map(foundById::get)
+                .filter(Objects::nonNull)
+                .toList();
     }
 
     @Override

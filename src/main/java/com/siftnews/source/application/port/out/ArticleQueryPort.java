@@ -1,6 +1,7 @@
 package com.siftnews.source.application.port.out;
 
 import com.siftnews.source.api.ArticleCandidate;
+import com.siftnews.source.api.ArticleExcerpt;
 
 import java.time.Instant;
 import java.util.List;
@@ -13,4 +14,6 @@ public interface ArticleQueryPort {
 
     /** 값이 null이면 클러스터 해제 (D-031). */
     void updateDedupClusters(Map<Long, String> clusterIdsByArticleId);
+
+    List<ArticleExcerpt> findByIds(List<Long> articleIds);
 }
