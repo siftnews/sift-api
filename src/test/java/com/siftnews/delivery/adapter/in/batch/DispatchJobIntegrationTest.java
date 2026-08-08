@@ -107,7 +107,8 @@ class DispatchJobIntegrationTest extends AbstractIntegrationTest {
                 Long.class, SUBSCRIBER_ID);
 
         assertThat(updateDeliveryTaskPort.claimPending(taskId)).isEqualTo(1);
-        assertThat(updateDeliveryTaskPort.markFailed(taskId, "smtp unavailable")).isEqualTo(1);
+        assertThat(updateDeliveryTaskPort.markFailed(taskId, "smtp unavailable", 1,
+                java.time.Instant.parse("2026-08-07T10:00:00Z"))).isEqualTo(1);
         assertThat(jdbcTemplate.queryForObject("select status from delivery_task where id = ?", String.class,
                 taskId)).isEqualTo("FAILED");
         assertThat(jdbcTemplate.queryForObject("select last_error from delivery_task where id = ?", String.class,
