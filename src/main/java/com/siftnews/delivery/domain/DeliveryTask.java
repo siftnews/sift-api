@@ -12,15 +12,17 @@ public class DeliveryTask {
 
     private final Long deliveryTaskId;
     private final Long deliveryJobId;
+    private final Long issueId;
     private final Long subscriberId;
     private final String email;
     private final DeliveryTaskStatus status;
     private final String idempotencyKey;
 
-    private DeliveryTask(Long deliveryTaskId, Long deliveryJobId, Long subscriberId, String email,
+    private DeliveryTask(Long deliveryTaskId, Long deliveryJobId, Long issueId, Long subscriberId, String email,
                          DeliveryTaskStatus status, String idempotencyKey) {
         this.deliveryTaskId = deliveryTaskId;
         this.deliveryJobId = deliveryJobId;
+        this.issueId = issueId;
         this.subscriberId = subscriberId;
         this.email = email;
         this.status = status;
@@ -31,13 +33,13 @@ public class DeliveryTask {
         if (deliveryJobId == null || issueId == null || subscriberId == null || email == null || email.isBlank()) {
             throw new BusinessException("delivery task 생성 값은 비어 있을 수 없습니다.");
         }
-        return new DeliveryTask(null, deliveryJobId, subscriberId, email, DeliveryTaskStatus.PENDING,
+        return new DeliveryTask(null, deliveryJobId, issueId, subscriberId, email, DeliveryTaskStatus.PENDING,
                 key(issueId, subscriberId));
     }
 
-    public static DeliveryTask restore(Long taskId, Long jobId, Long subscriberId, String email,
+    public static DeliveryTask restore(Long taskId, Long jobId, Long issueId, Long subscriberId, String email,
                                        DeliveryTaskStatus status, String key) {
-        return new DeliveryTask(taskId, jobId, subscriberId, email, status, key);
+        return new DeliveryTask(taskId, jobId, issueId, subscriberId, email, status, key);
     }
 
     private static String key(Long issueId, Long subscriberId) {

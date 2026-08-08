@@ -26,5 +26,11 @@ public interface ArticleCatalog {
      */
     void updateDedupClusters(Map<Long, String> clusterIdsByArticleId);
 
+    /**
+     * 기사 ID를 벌크 조회한다.
+     * <p>
+     * null 또는 빈 입력은 빈 목록을 반환한다. 존재하지 않는 ID와 null ID는 결과에서 제외하고,
+     * 중복 ID는 첫 등장만 유지한다. 반환 순서는 입력의 첫 등장 순서를 따른다.
+     */
     List<ArticleExcerpt> findByIds(List<Long> articleIds);
 }

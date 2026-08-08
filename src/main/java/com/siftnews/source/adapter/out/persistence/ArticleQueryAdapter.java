@@ -12,6 +12,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -43,11 +46,22 @@ class ArticleQueryAdapter implements ArticleQueryPort {
 
     @Override
     public List<ArticleExcerpt> findByIds(List<Long> articleIds) {
-        if (articleIds.isEmpty()) {
+        if (articleIds == null || articleIds.isEmpty()) {
             return List.of();
         }
-        return articleJpaRepository.findByIdIn(articleIds).stream()
+        List<Long> requestedIds = articleIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (requestedIds.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, ArticleExcerpt> foundById = articleJpaRepository.findByIdIn(requestedIds).stream()
                 .map(article -> new ArticleExcerpt(article.getId(), article.getTitle(), article.getUrl()))
+                .collect(Collectors.toMap(ArticleExcerpt::articleId, Function.identity(), (first, ignored) -> first));
+        return requestedIds.stream()
+                .map(foundById::get)
+                .filter(Objects::nonNull)
                 .toList();
     }
 

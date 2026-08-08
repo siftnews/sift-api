@@ -1,11 +1,9 @@
 package com.siftnews.delivery.adapter.in.batch;
 
-import com.siftnews.content.api.IssueCatalog;
 import com.siftnews.delivery.application.port.in.DispatchIssueUseCase;
+import com.siftnews.delivery.application.port.in.SendDeliveryTaskUseCase;
 import com.siftnews.delivery.application.port.out.LoadDeliveryJobPort;
 import com.siftnews.delivery.application.port.out.LoadPendingDeliveryTasksPort;
-import com.siftnews.delivery.application.port.out.SendEmailPort;
-import com.siftnews.delivery.application.port.out.UpdateDeliveryTaskPort;
 import com.siftnews.delivery.domain.DeliveryTask;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobParametersValidator;
@@ -15,7 +13,7 @@ import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.step.tasklet.Tasklet;
-import org.springframework.batch.item.ItemReader;
+import org.springframework.batch.item.ItemStreamReader;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Value;
@@ -50,7 +48,8 @@ class DispatchJobConfig {
 
     @Bean
     Step sendStep(JobRepository jobRepository, PlatformTransactionManager transactionManager,
-                  ItemReader<DeliveryTask> pendingDeliveryTaskReader, ItemWriter<DeliveryTask> deliveryEmailWriter,
+                  ItemStreamReader<DeliveryTask> pendingDeliveryTaskReader,
+                  ItemWriter<DeliveryTask> deliveryEmailWriter,
                   DispatchMetricsListener metricsListener) {
         return new StepBuilder("sendStep", jobRepository)
                 .<DeliveryTask, DeliveryTask>chunk(500, transactionManager)
@@ -62,7 +61,7 @@ class DispatchJobConfig {
 
     @Bean
     @StepScope
-    ItemReader<DeliveryTask> pendingDeliveryTaskReader(LoadDeliveryJobPort loadDeliveryJobPort,
+    ItemStreamReader<DeliveryTask> pendingDeliveryTaskReader(LoadDeliveryJobPort loadDeliveryJobPort,
             LoadPendingDeliveryTasksPort loadPendingDeliveryTasksPort,
             @Value("#{jobParameters['" + DispatchJobParameters.ISSUE_ID + "']}") Long issueId) {
         return new PendingDeliveryTaskReader(issueId, loadDeliveryJobPort, loadPendingDeliveryTasksPort);
@@ -70,10 +69,8 @@ class DispatchJobConfig {
 
     @Bean
     @StepScope
-    ItemWriter<DeliveryTask> deliveryEmailWriter(IssueCatalog issueCatalog, SendEmailPort sendEmailPort,
-            UpdateDeliveryTaskPort updateDeliveryTaskPort,
-            @Value("#{jobParameters['" + DispatchJobParameters.ISSUE_ID + "']}") Long issueId) {
-        return new DeliveryEmailWriter(issueId, issueCatalog, sendEmailPort, updateDeliveryTaskPort);
+    ItemWriter<DeliveryTask> deliveryEmailWriter(SendDeliveryTaskUseCase sendDeliveryTaskUseCase) {
+        return new DeliveryEmailWriter(sendDeliveryTaskUseCase);
     }
 
     @Bean

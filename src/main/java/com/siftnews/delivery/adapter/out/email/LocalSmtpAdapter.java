@@ -1,6 +1,8 @@
 package com.siftnews.delivery.adapter.out.email;
 
 import com.siftnews.delivery.application.port.out.SendEmailPort;
+import com.siftnews.delivery.domain.DeliveryException;
+import com.siftnews.delivery.domain.DeliveryFailureCategory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -16,15 +18,24 @@ class LocalSmtpAdapter implements SendEmailPort {
 
     @Override
     public void send(String recipient, String subject, String htmlBody) {
+        var message = createMessage(recipient, subject, htmlBody);
+        try {
+            sender.send(message);
+        } catch (Exception exception) {
+            throw new DeliveryException(DeliveryFailureCategory.SMTP, exception);
+        }
+    }
+
+    private jakarta.mail.internet.MimeMessage createMessage(String recipient, String subject, String htmlBody) {
         try {
             var message = sender.createMimeMessage();
             var helper = new MimeMessageHelper(message, "UTF-8");
             helper.setTo(recipient);
             helper.setSubject(subject);
             helper.setText(htmlBody, true);
-            sender.send(message);
+            return message;
         } catch (Exception exception) {
-            throw new IllegalStateException("메일 발송에 실패했습니다.", exception);
+            throw new DeliveryException(DeliveryFailureCategory.MESSAGE, exception);
         }
     }
 }

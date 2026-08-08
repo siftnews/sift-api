@@ -8,6 +8,7 @@ import com.siftnews.content.application.port.out.LoadNewsletterIssuePort;
 import com.siftnews.content.application.port.out.LoadScheduledIssuesPort;
 import com.siftnews.content.application.port.out.NewsletterIssueData;
 import com.siftnews.content.application.port.out.NewsletterIssueItemData;
+import com.siftnews.content.domain.ContentException;
 import com.siftnews.source.api.ArticleCatalog;
 import com.siftnews.source.api.ArticleExcerpt;
 import lombok.RequiredArgsConstructor;
@@ -54,7 +55,7 @@ class IssueCatalogService implements IssueCatalog {
                                                   Map<Long, ArticleExcerpt> articlesById) {
         ArticleExcerpt article = articlesById.get(item.articleId());
         if (article == null) {
-            throw new IllegalStateException("이슈 기사를 찾을 수 없습니다: articleId=" + item.articleId());
+            throw new ContentException("이슈 기사 참조 무결성 오류: articleId=" + item.articleId());
         }
         return new NewsletterArticle(item.rank(), article.title(), article.url());
     }

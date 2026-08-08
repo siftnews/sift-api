@@ -2,6 +2,8 @@ package com.siftnews.delivery.adapter.in.batch;
 
 import com.siftnews.support.AbstractIntegrationTest;
 import com.siftnews.support.TestDatabaseFixtures;
+import com.siftnews.delivery.application.port.in.DispatchIssueUseCase;
+import com.siftnews.delivery.application.port.out.UpdateDeliveryTaskPort;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,6 +50,12 @@ class DispatchJobIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private TransactionTemplate transactionTemplate;
 
+    @Autowired
+    private DispatchIssueUseCase dispatchIssueUseCase;
+
+    @Autowired
+    private UpdateDeliveryTaskPort updateDeliveryTaskPort;
+
     @BeforeEach
     void setUp() {
         jobLauncherTestUtils.setJob(dispatchJob);
@@ -73,6 +81,22 @@ class DispatchJobIntegrationTest extends AbstractIntegrationTest {
                 .containsExactly("snapshotStep", "sendStep");
         assertThat(jdbcTemplate.queryForObject("select status from delivery_task where subscriber_id = ?",
                 String.class, SUBSCRIBER_ID)).isEqualTo("SENT");
+    }
+
+    @Test
+    void appliesConditionalTaskTransitions() {
+        dispatchIssueUseCase.dispatch(ISSUE_ID, TOPIC_ID, SEND_HOUR);
+        Long taskId = jdbcTemplate.queryForObject("select id from delivery_task where subscriber_id = ?",
+                Long.class, SUBSCRIBER_ID);
+
+        assertThat(updateDeliveryTaskPort.claimPending(taskId)).isEqualTo(1);
+        assertThat(updateDeliveryTaskPort.claimPending(taskId)).isZero();
+        assertThat(updateDeliveryTaskPort.markSent(taskId)).isEqualTo(1);
+        assertThat(updateDeliveryTaskPort.markFailed(taskId, "should not overwrite sent")).isZero();
+        assertThat(jdbcTemplate.queryForObject("select status from delivery_task where id = ?", String.class,
+                taskId)).isEqualTo("SENT");
+        assertThat(jdbcTemplate.queryForObject("select sent_at from delivery_task where id = ?", Object.class,
+                taskId)).isNotNull();
     }
 
     private void prepareDispatchTarget() {
