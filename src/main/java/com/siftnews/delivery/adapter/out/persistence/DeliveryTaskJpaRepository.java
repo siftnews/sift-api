@@ -83,12 +83,14 @@ interface DeliveryTaskJpaRepository extends JpaRepository<DeliveryTaskJpaEntity,
     @Query("""
             update DeliveryTaskJpaEntity task
             set task.status = com.siftnews.delivery.domain.DeliveryTaskStatus.DEAD,
+                task.attemptCount = :attemptCount,
                 task.lastError = :error,
                 task.nextRetryAt = null
             where task.id = :taskId
               and task.status = com.siftnews.delivery.domain.DeliveryTaskStatus.SENDING
             """)
-    int markDead(@Param("taskId") Long taskId, @Param("error") String error);
+    int markDead(@Param("taskId") Long taskId, @Param("error") String error,
+                 @Param("attemptCount") int attemptCount);
 
     @Modifying
     @Query(value = """

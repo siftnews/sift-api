@@ -12,5 +12,5 @@ public interface UpdateDeliveryTaskPort {
 
     int markFailed(Long taskId, String error, int attemptCount, Instant nextRetryAt);
 
-    int markDead(Long taskId, String error);
+    int markDead(Long taskId, String error, int attemptCount);
 }

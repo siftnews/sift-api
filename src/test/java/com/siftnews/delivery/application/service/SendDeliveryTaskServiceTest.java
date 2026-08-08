@@ -102,6 +102,7 @@ class SendDeliveryTaskServiceTest {
 
         assertThat(updates.deadError).isEqualTo(
                 "메일 발송 실패: category=PERMANENT, causeType=IllegalStateException");
+        assertThat(updates.deadAttemptCount).isEqualTo(1);
         assertThat(updates.operations).containsExactly("claim-pending:105", "dead:105");
         assertThat(updates.failedNextRetryAt).isNull();
     }
@@ -116,6 +117,7 @@ class SendDeliveryTaskServiceTest {
 
         assertThat(updates.operations).containsExactly("claim-failed:106", "dead:106");
         assertThat(updates.deadError).contains("category=TRANSIENT");
+        assertThat(updates.deadAttemptCount).isEqualTo(3);
     }
 
     private static SendDeliveryTaskService service(RecordingEmailSender sender,
@@ -183,6 +185,7 @@ class SendDeliveryTaskServiceTest {
         private int failedAttemptCount;
         private Instant failedNextRetryAt;
         private String deadError;
+        private int deadAttemptCount;
 
         @Override
         public int claimPending(Long taskId) {
@@ -212,9 +215,10 @@ class SendDeliveryTaskServiceTest {
         }
 
         @Override
-        public int markDead(Long taskId, String error) {
+        public int markDead(Long taskId, String error, int attemptCount) {
             operations.add("dead:" + taskId);
             deadError = error;
+            deadAttemptCount = attemptCount;
             return 1;
         }
     }

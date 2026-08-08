@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.sql.Timestamp;
@@ -35,7 +36,6 @@ class RetryJobIntegrationTest extends AbstractIntegrationTest {
     private static final long ARTICLE_ID = 620_004L;
     private static final long SUBSCRIBER_ID = 620_005L;
     private static final int SEND_HOUR = 9;
-    private static final Instant FIXED_NOW = Instant.parse("2026-08-05T21:00:00Z");
 
     @Autowired
     private JobLauncherTestUtils jobLauncherTestUtils;
@@ -52,6 +52,9 @@ class RetryJobIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private TransactionTemplate transactionTemplate;
+
+    @Autowired
+    private Clock clock;
 
     @Autowired
     private DispatchIssueUseCase dispatchIssueUseCase;
@@ -74,12 +77,13 @@ class RetryJobIntegrationTest extends AbstractIntegrationTest {
     void retriesDueFailedTaskAndClearsRetryMetadata() throws Exception {
         dispatchIssueUseCase.dispatch(ISSUE_ID, TOPIC_ID, SEND_HOUR);
         Long taskId = taskId();
+        Instant now = clock.instant();
         jdbcTemplate.update("""
                 update delivery_task
                 set status = 'FAILED', attempt_count = 1,
                     next_retry_at = ?, last_error = 'temporary failure'
                 where id = ?
-                """, Timestamp.from(FIXED_NOW.minusSeconds(1)), taskId);
+                """, Timestamp.from(now.minusSeconds(1)), taskId);
 
         JobExecution execution = jobLauncherTestUtils.launchJob(new JobParametersBuilder()
                 .addLong(RetryJobParameters.LAUNCHED_AT, 620_001L)
@@ -102,19 +106,20 @@ class RetryJobIntegrationTest extends AbstractIntegrationTest {
     void failedClaimIsConditionalOnDueTimeAndStatus() {
         dispatchIssueUseCase.dispatch(ISSUE_ID, TOPIC_ID, SEND_HOUR);
         Long taskId = taskId();
+        Instant now = clock.instant();
         jdbcTemplate.update("""
                 update delivery_task
                 set status = 'FAILED', attempt_count = 1, next_retry_at = ?
                 where id = ?
-                """, Timestamp.from(FIXED_NOW.plusSeconds(60)), taskId);
+                """, Timestamp.from(now.plusSeconds(60)), taskId);
 
-        assertThat(updateDeliveryTaskPort.claimFailed(taskId, FIXED_NOW, 3)).isZero();
+        assertThat(updateDeliveryTaskPort.claimFailed(taskId, now, 3)).isZero();
 
         jdbcTemplate.update("update delivery_task set next_retry_at = ? where id = ?",
-                Timestamp.from(FIXED_NOW.minusSeconds(1)), taskId);
-        assertThat(updateDeliveryTaskPort.claimFailed(taskId, FIXED_NOW, 3)).isEqualTo(1);
-        assertThat(updateDeliveryTaskPort.claimFailed(taskId, FIXED_NOW, 3)).isZero();
-        assertThat(updateDeliveryTaskPort.markFailed(taskId, "again", 2, FIXED_NOW.plusSeconds(120)))
+                Timestamp.from(now.minusSeconds(1)), taskId);
+        assertThat(updateDeliveryTaskPort.claimFailed(taskId, now, 3)).isEqualTo(1);
+        assertThat(updateDeliveryTaskPort.claimFailed(taskId, now, 3)).isZero();
+        assertThat(updateDeliveryTaskPort.markFailed(taskId, "again", 2, now.plusSeconds(120)))
                 .isEqualTo(1);
         assertThat(jdbcTemplate.queryForObject("select status from delivery_task where id = ?",
                 String.class, taskId)).isEqualTo("FAILED");
