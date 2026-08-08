@@ -22,7 +22,7 @@ class LocalSmtpAdapter implements SendEmailPort {
         try {
             sender.send(message);
         } catch (Exception exception) {
-            throw new DeliveryException(DeliveryFailureCategory.SMTP, exception);
+            throw new DeliveryException(DeliveryFailureCategory.TRANSIENT, exception);
         }
     }
 
@@ -35,7 +35,7 @@ class LocalSmtpAdapter implements SendEmailPort {
             helper.setText(htmlBody, true);
             return message;
         } catch (Exception exception) {
-            throw new DeliveryException(DeliveryFailureCategory.MESSAGE, exception);
+            throw new DeliveryException(DeliveryFailureCategory.PERMANENT, exception);
         }
     }
 }

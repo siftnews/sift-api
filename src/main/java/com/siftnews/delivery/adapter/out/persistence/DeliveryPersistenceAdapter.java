@@ -2,6 +2,7 @@ package com.siftnews.delivery.adapter.out.persistence;
 
 import com.siftnews.delivery.application.port.out.LoadDeliveryJobPort;
 import com.siftnews.delivery.application.port.out.LoadPendingDeliveryTasksPort;
+import com.siftnews.delivery.application.port.out.LoadRetriableDeliveryTasksPort;
 import com.siftnews.delivery.application.port.out.SaveDeliveryJobPort;
 import com.siftnews.delivery.application.port.out.SaveDeliveryTaskPort;
 import com.siftnews.delivery.application.port.out.UpdateDeliveryTaskPort;
@@ -15,12 +16,14 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
 class DeliveryPersistenceAdapter implements LoadDeliveryJobPort, SaveDeliveryJobPort, SaveDeliveryTaskPort,
-        LoadPendingDeliveryTasksPort, UpdateDeliveryTaskPort {
+        LoadPendingDeliveryTasksPort, LoadRetriableDeliveryTasksPort, UpdateDeliveryTaskPort {
 
     private final DeliveryJobJpaRepository deliveryJobJpaRepository;
     private final DeliveryTaskJpaRepository deliveryTaskJpaRepository;
@@ -67,7 +70,30 @@ class DeliveryPersistenceAdapter implements LoadDeliveryJobPort, SaveDeliveryJob
                 .stream()
                 .map(entity -> DeliveryTask.restore(entity.getId(), entity.getDeliveryJobId(),
                         issueId, entity.getSubscriberId(), entity.getEmail(), entity.getStatus(),
+                        entity.getAttemptCount(), entity.getNextRetryAt(), entity.getLastError(),
                         entity.getIdempotencyKey()))
+                .toList();
+    }
+
+    @Override
+    public List<DeliveryTask> loadRetriable(java.time.Instant now, Long afterTaskId, int maxAttempts, int limit) {
+        if (maxAttempts <= 0) {
+            throw new IllegalArgumentException("최대 발송 시도 횟수는 0보다 커야 합니다: " + maxAttempts);
+        }
+        if (limit <= 0) {
+            throw new IllegalArgumentException("task 페이지 크기는 0보다 커야 합니다: " + limit);
+        }
+        List<DeliveryTaskJpaEntity> page = deliveryTaskJpaRepository.findRetriable(
+                now, maxAttempts, afterTaskId, PageRequest.of(0, limit));
+        Map<Long, Long> issueIdByJobId = deliveryJobJpaRepository.findAllById(page.stream()
+                        .map(DeliveryTaskJpaEntity::getDeliveryJobId)
+                        .distinct()
+                        .toList())
+                .stream()
+                .collect(Collectors.toMap(DeliveryJobJpaEntity::getId, DeliveryJobJpaEntity::getIssueId,
+                        (first, ignored) -> first));
+        return page.stream()
+                .map(entity -> toDomain(entity, issueIdByJobId.get(entity.getDeliveryJobId())))
                 .toList();
     }
 
@@ -79,17 +105,38 @@ class DeliveryPersistenceAdapter implements LoadDeliveryJobPort, SaveDeliveryJob
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public int claimFailed(Long taskId, java.time.Instant now, int maxAttempts) {
+        return deliveryTaskJpaRepository.claimFailed(taskId, now, maxAttempts);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public int markSent(Long taskId) {
         return deliveryTaskJpaRepository.markSent(taskId);
     }
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public int markFailed(Long taskId, String error) {
-        return deliveryTaskJpaRepository.markFailed(taskId, error);
+    public int markFailed(Long taskId, String error, int attemptCount, java.time.Instant nextRetryAt) {
+        return deliveryTaskJpaRepository.markFailed(taskId, error, attemptCount, nextRetryAt);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public int markDead(Long taskId, String error, int attemptCount) {
+        return deliveryTaskJpaRepository.markDead(taskId, error, attemptCount);
     }
 
     private DeliveryJob toDomain(DeliveryJobJpaEntity entity) {
         return DeliveryJob.restore(entity.getId(), entity.getIssueId(), entity.getTotalCount(), entity.getStatus());
+    }
+
+    private DeliveryTask toDomain(DeliveryTaskJpaEntity entity, Long issueId) {
+        if (issueId == null) {
+            throw new IllegalStateException("발송 작업의 이슈를 찾을 수 없습니다: jobId=" + entity.getDeliveryJobId());
+        }
+        return DeliveryTask.restore(entity.getId(), entity.getDeliveryJobId(), issueId, entity.getSubscriberId(),
+                entity.getEmail(), entity.getStatus(), entity.getAttemptCount(), entity.getNextRetryAt(),
+                entity.getLastError(), entity.getIdempotencyKey());
     }
 }

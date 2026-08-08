@@ -54,7 +54,7 @@ class PendingDeliveryTaskReaderTest {
 
     private static DeliveryTask task(Long taskId) {
         return DeliveryTask.restore(taskId, JOB_ID, ISSUE_ID, 7L, "reader@example.com",
-                DeliveryTaskStatus.PENDING, "key-" + taskId);
+                DeliveryTaskStatus.PENDING, 0, null, null, "key-" + taskId);
     }
 
     private record PageRequest(

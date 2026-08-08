@@ -6,6 +6,7 @@ import lombok.Getter;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 
 @Getter
 public class DeliveryTask {
@@ -16,16 +17,23 @@ public class DeliveryTask {
     private final Long subscriberId;
     private final String email;
     private final DeliveryTaskStatus status;
+    private final int attemptCount;
+    private final Instant nextRetryAt;
+    private final String lastError;
     private final String idempotencyKey;
 
     private DeliveryTask(Long deliveryTaskId, Long deliveryJobId, Long issueId, Long subscriberId, String email,
-                         DeliveryTaskStatus status, String idempotencyKey) {
+                         DeliveryTaskStatus status, int attemptCount, Instant nextRetryAt, String lastError,
+                         String idempotencyKey) {
         this.deliveryTaskId = deliveryTaskId;
         this.deliveryJobId = deliveryJobId;
         this.issueId = issueId;
         this.subscriberId = subscriberId;
         this.email = email;
         this.status = status;
+        this.attemptCount = attemptCount;
+        this.nextRetryAt = nextRetryAt;
+        this.lastError = lastError;
         this.idempotencyKey = idempotencyKey;
     }
 
@@ -34,12 +42,14 @@ public class DeliveryTask {
             throw new BusinessException("delivery task 생성 값은 비어 있을 수 없습니다.");
         }
         return new DeliveryTask(null, deliveryJobId, issueId, subscriberId, email, DeliveryTaskStatus.PENDING,
-                key(issueId, subscriberId));
+                0, null, null, key(issueId, subscriberId));
     }
 
     public static DeliveryTask restore(Long taskId, Long jobId, Long issueId, Long subscriberId, String email,
-                                       DeliveryTaskStatus status, String key) {
-        return new DeliveryTask(taskId, jobId, issueId, subscriberId, email, status, key);
+                                       DeliveryTaskStatus status, int attemptCount, Instant nextRetryAt,
+                                       String lastError, String key) {
+        return new DeliveryTask(taskId, jobId, issueId, subscriberId, email, status, attemptCount, nextRetryAt,
+                lastError, key);
     }
 
     private static String key(Long issueId, Long subscriberId) {

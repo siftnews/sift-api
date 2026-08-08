@@ -7,8 +7,12 @@ import com.siftnews.delivery.application.port.out.SendEmailPort;
 import com.siftnews.delivery.application.port.out.UpdateDeliveryTaskPort;
 import com.siftnews.delivery.domain.DeliveryException;
 import com.siftnews.delivery.domain.DeliveryTask;
+import com.siftnews.delivery.domain.DeliveryTaskStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.time.Clock;
+import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
@@ -17,11 +21,13 @@ public class SendDeliveryTaskService implements SendDeliveryTaskUseCase {
     private final IssueCatalog issueCatalog;
     private final SendEmailPort sendEmailPort;
     private final UpdateDeliveryTaskPort updateDeliveryTaskPort;
+    private final Clock clock;
+    private final DeliveryRetryPolicy retryPolicy;
     private final HtmlEmailRenderer renderer = new HtmlEmailRenderer();
 
     @Override
     public SendDeliveryTaskResult send(DeliveryTask task) {
-        if (updateDeliveryTaskPort.claimPending(task.getDeliveryTaskId()) != 1) {
+        if (!claim(task)) {
             return SendDeliveryTaskResult.CLAIM_SKIPPED;
         }
 
@@ -31,7 +37,7 @@ public class SendDeliveryTaskService implements SendDeliveryTaskUseCase {
                             + task.getIssueId()));
             sendEmailPort.send(task.getEmail(), issue.title(), renderer.render(issue));
         } catch (RuntimeException exception) {
-            markFailed(task, exception);
+            recordFailure(task, exception);
             return SendDeliveryTaskResult.FAILED;
         }
 
@@ -41,10 +47,31 @@ public class SendDeliveryTaskService implements SendDeliveryTaskUseCase {
         return SendDeliveryTaskResult.SENT;
     }
 
-    private void markFailed(DeliveryTask task, RuntimeException exception) {
+    private boolean claim(DeliveryTask task) {
+        if (task.getStatus() == DeliveryTaskStatus.PENDING) {
+            return updateDeliveryTaskPort.claimPending(task.getDeliveryTaskId()) == 1;
+        }
+        if (task.getStatus() == DeliveryTaskStatus.FAILED) {
+            return updateDeliveryTaskPort.claimFailed(task.getDeliveryTaskId(), clock.instant(),
+                    retryPolicy.maxAttempts()) == 1;
+        }
+        return false;
+    }
+
+    private void recordFailure(DeliveryTask task, RuntimeException exception) {
         String error = DeliveryException.safeMessage(exception);
-        if (updateDeliveryTaskPort.markFailed(task.getDeliveryTaskId(), error) != 1) {
-            throw new IllegalStateException("FAILED 상태 전이에 실패했습니다: taskId="
+        int nextAttemptCount = task.getAttemptCount() + 1;
+        if (retryPolicy.isRetryable(exception) && nextAttemptCount < retryPolicy.maxAttempts()) {
+            Instant nextRetryAt = retryPolicy.nextRetryAt(clock.instant(), nextAttemptCount);
+            if (updateDeliveryTaskPort.markFailed(task.getDeliveryTaskId(), error, nextAttemptCount,
+                    nextRetryAt) != 1) {
+                throw new IllegalStateException("FAILED 상태 전이에 실패했습니다: taskId="
+                        + task.getDeliveryTaskId());
+            }
+            return;
+        }
+        if (updateDeliveryTaskPort.markDead(task.getDeliveryTaskId(), error, nextAttemptCount) != 1) {
+            throw new IllegalStateException("DEAD 상태 전이에 실패했습니다: taskId="
                     + task.getDeliveryTaskId());
         }
     }
