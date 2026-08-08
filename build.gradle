@@ -38,6 +38,9 @@ dependencies {
     // database driver
     runtimeOnly 'org.postgresql:postgresql'
 
+    // Prometheus scrape endpoint
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+
     // rss parsing
     implementation 'com.rometools:rome:2.1.0'
 
