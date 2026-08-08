@@ -1,0 +1,5 @@
+sift:
+  load-test:
+    subscribers:
+      count: 100000
+      email-domain: loadtest.sift.local
