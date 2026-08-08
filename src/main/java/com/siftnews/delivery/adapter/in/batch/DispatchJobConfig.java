@@ -16,6 +16,7 @@ import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.item.ItemStreamReader;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -48,8 +49,8 @@ class DispatchJobConfig {
 
     @Bean
     Step sendStep(JobRepository jobRepository, PlatformTransactionManager transactionManager,
-                  ItemStreamReader<DeliveryTask> pendingDeliveryTaskReader,
-                  ItemWriter<DeliveryTask> deliveryEmailWriter,
+                  @Qualifier("pendingDeliveryTaskReader") ItemStreamReader<DeliveryTask> pendingDeliveryTaskReader,
+                  @Qualifier("deliveryEmailWriter") ItemWriter<DeliveryTask> deliveryEmailWriter,
                   DispatchMetricsListener metricsListener) {
         return new StepBuilder("sendStep", jobRepository)
                 .<DeliveryTask, DeliveryTask>chunk(500, transactionManager)

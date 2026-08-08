@@ -27,7 +27,8 @@ class DeliveryEmailWriterTest {
     }
 
     private static DeliveryTask task(Long taskId, String email) {
-        return DeliveryTask.restore(taskId, 5L, 11L, 7L, email, DeliveryTaskStatus.PENDING, "key-" + taskId);
+        return DeliveryTask.restore(taskId, 5L, 11L, 7L, email, DeliveryTaskStatus.PENDING,
+                0, null, null, "key-" + taskId);
     }
 
     private static final class RecordingSendDeliveryTaskUseCase implements SendDeliveryTaskUseCase {

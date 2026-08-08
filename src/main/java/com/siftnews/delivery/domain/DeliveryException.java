@@ -15,11 +15,18 @@ public class DeliveryException extends BusinessException {
         return category;
     }
 
+    public static DeliveryFailureCategory categoryOf(Throwable exception) {
+        if (exception instanceof DeliveryException deliveryException) {
+            return deliveryException.getCategory();
+        }
+        return DeliveryFailureCategory.UNKNOWN;
+    }
+
     public static String safeMessage(Throwable exception) {
         if (exception instanceof DeliveryException deliveryException) {
             return deliveryException.getMessage();
         }
-        return message(DeliveryFailureCategory.UNKNOWN, exception);
+        return message(categoryOf(exception), exception);
     }
 
     private static String message(DeliveryFailureCategory category, Throwable cause) {

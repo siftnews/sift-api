@@ -17,9 +17,9 @@ spring:
   task:
     scheduling:
       pool:
-        # 기본값 1이면 수집(매시간)·선별(매일 06:00) 트리거가 한 스레드를 두고 줄을 선다 —
-        # 06:00에 수집이 물려 있으면 그날 발행이 그만큼 밀린다. 트리거 수만큼 확보한다.
-        size: 3
+        # 기본값 1이면 수집·선별·발송·재시도 트리거가 한 스레드를 두고 줄을 선다 —
+        # 하나의 배치 기동이 오래 걸려도 다른 주기가 밀리지 않도록 트리거 수만큼 확보한다.
+        size: 4
 
 sift:
   collection:
@@ -37,6 +37,12 @@ sift:
   delivery:
     cron: "0 0 * * * *"
     zone: Asia/Seoul
+    retry:
+      cron: "0 */5 * * * *"
+      zone: Asia/Seoul
+      max-attempts: 3
+      base-delay-seconds: 60
+      max-delay-seconds: 3600
 
 management:
   endpoints:

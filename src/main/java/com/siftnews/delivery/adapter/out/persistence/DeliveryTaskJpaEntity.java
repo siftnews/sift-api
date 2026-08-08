@@ -38,6 +38,9 @@ class DeliveryTaskJpaEntity extends BaseEntity {
     @Column(name = "last_error")
     private String lastError;
 
+    @Column(name = "next_retry_at")
+    private Instant nextRetryAt;
+
     @Column(name = "sent_at")
     private Instant sentAt;
 

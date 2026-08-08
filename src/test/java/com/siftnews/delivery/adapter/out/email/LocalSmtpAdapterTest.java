@@ -22,7 +22,7 @@ class LocalSmtpAdapterTest {
 
         assertThatThrownBy(() -> adapter.send("reader@example.com", "Sift", "<p>Hello</p>"))
                 .isInstanceOfSatisfying(DeliveryException.class, exception -> {
-                    assertThat(exception.getCategory()).isEqualTo(DeliveryFailureCategory.SMTP);
+                    assertThat(exception.getCategory()).isEqualTo(DeliveryFailureCategory.TRANSIENT);
                     assertThat(exception.getMessage()).doesNotContain("reader@example.com", "raw SMTP response");
                 });
     }
