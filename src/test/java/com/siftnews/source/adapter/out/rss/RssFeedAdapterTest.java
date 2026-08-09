@@ -42,6 +42,28 @@ class RssFeedAdapterTest {
     }
 
     @Test
+    void parse는_Atom_피드를_RawArticle_목록으로_변환한다() {
+        Source source = Source.restore(1L, "네이버 D2", SourceType.RSS,
+                "https://d2.naver.com/d2.atom", "ko", Category.PROGRAMMING, true, null);
+
+        try (InputStream feedStream = getClass().getResourceAsStream("/rss/valid-atom-feed.xml")) {
+            List<RawArticle> articles = adapter.parse(source, feedStream);
+
+            assertThat(articles).hasSize(2);
+
+            RawArticle first = articles.get(0);
+            assertThat(first.url()).isEqualTo("https://d2.naver.com/news/1001");
+            assertThat(first.title()).isEqualTo("첫 번째 D2 글");
+            assertThat(first.body()).contains("첫 번째 본문");
+            assertThat(first.lang()).isEqualTo("ko");
+            assertThat(first.category()).isEqualTo(Category.PROGRAMMING);
+            assertThat(first.publishedAt()).isNull();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test
     void parse는_아이템이_없는_피드에_대해_빈_목록을_반환한다() {
         Source source = Source.restore(1L, "Test Source", SourceType.RSS,
                 "https://example.com/rss", "en", Category.DEV, true, null);
@@ -66,6 +88,28 @@ class RssFeedAdapterTest {
             assertThat(articles).hasSize(2);
             assertThat(articles.get(0).publishedAt()).isNull();
             assertThat(articles.get(1).publishedAt()).isNotNull();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * description이 없는 피드가 실제로 있다 — 한국경제는 title·link·pubDate만 싣고, 토스는
+     * 일부 항목이 content:encoded만 갖는다. 방어가 없으면 NPE로 그 소스의 수집이 통째로 실패했다
+     * (2026-07-26 e2e에서 9개 중 2개 소스 누락).
+     */
+    @Test
+    void parse는_description이_없는_항목도_변환한다() {
+        Source source = Source.restore(1L, "Test Source", SourceType.RSS,
+                "https://example.com/rss", "ko", Category.DEV, true, null);
+
+        try (InputStream feedStream = getClass().getResourceAsStream("/rss/missing-description-feed.xml")) {
+            List<RawArticle> articles = adapter.parse(source, feedStream);
+
+            assertThat(articles).hasSize(2);
+            assertThat(articles.get(0).body()).isNull();
+            assertThat(articles.get(0).title()).isEqualTo("본문 없는 기사");
+            assertThat(articles.get(1).body()).contains("content:encoded 본문");
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

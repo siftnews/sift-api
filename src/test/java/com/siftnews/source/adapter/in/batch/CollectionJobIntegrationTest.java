@@ -14,11 +14,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.ExitStatus;
+import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobExecution;
+import org.springframework.batch.core.JobParameters;
+import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.StepExecution;
+import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
 import org.springframework.batch.test.JobLauncherTestUtils;
 import org.springframework.batch.test.context.SpringBatchTest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
@@ -33,6 +38,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * collectionJob 조립 통합 테스트 — {@code @SpringBatchTest}로 Job을 실제 기동한다.
@@ -45,6 +51,11 @@ class CollectionJobIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private JobLauncherTestUtils jobLauncherTestUtils;
 
+    /** selectionJob이 생기며 Job 빈이 둘이 되어, 어느 것을 돌릴지 명시해야 한다 (이슈 #31). */
+    @Autowired
+    @Qualifier("collectionJob")
+    private Job collectionJob;
+
     @Autowired
     private FakeSaveArticlePort saveArticlePort;
 
@@ -56,6 +67,7 @@ class CollectionJobIntegrationTest extends AbstractIntegrationTest {
 
     @BeforeEach
     void reset() {
+        jobLauncherTestUtils.setJob(collectionJob);
         saveArticlePort.clear();
         fetchFeedPort.clearFailures();
     }
@@ -105,6 +117,26 @@ class CollectionJobIntegrationTest extends AbstractIntegrationTest {
         // MeterRegistry에 바인딩한다. 액추에이터가 이 레지스트리를 /actuator/metrics 로 노출한다.
         assertThat(meterRegistry.find("spring.batch.job").timer()).isNotNull();
         assertThat(meterRegistry.find("spring.batch.step").timer()).isNotNull();
+    }
+
+    @Test
+    void allowsRelaunchOnlyWhenLaunchedAtDiffers() throws Exception {
+        JobParameters firstCycle = launchedAt(1_000L);
+        JobParameters secondCycle = launchedAt(2_000L);
+
+        assertThat(jobLauncherTestUtils.launchJob(firstCycle).getStatus()).isEqualTo(BatchStatus.COMPLETED);
+        assertThat(jobLauncherTestUtils.launchJob(secondCycle).getStatus()).isEqualTo(BatchStatus.COMPLETED);
+
+        // 파라미터가 같으면 같은 JobInstance라 재기동이 거부된다 — collectionTrigger가 매 주기
+        // launchedAt을 새로 넣는 이유이자, 넣지 않으면 두 번째 주기부터 수집이 멈추는 회귀의 방어선.
+        assertThatThrownBy(() -> jobLauncherTestUtils.launchJob(firstCycle))
+                .isInstanceOf(JobInstanceAlreadyCompleteException.class);
+    }
+
+    private static JobParameters launchedAt(long epochMilli) {
+        return new JobParametersBuilder()
+                .addLong(CollectionJobParameters.LAUNCHED_AT, epochMilli)
+                .toJobParameters();
     }
 
     @TestConfiguration

@@ -14,10 +14,11 @@ reviews:
 
   path_filters:
     - "!**/build/**"
-    - "!**/out/**"
+    - "!out/**"          # IntelliJ 빌드 산출물만 — `**/out/**`는 헥사고날 port/out·adapter/out까지 제외시킨다
     - "!**/.gradle/**"
     - "!**/generated/**"
-    - "!**/*.md"
+    - "!**/*.md"         # 설계 문서가 sift-docs로 이동해(D-038) 이 레포의 .md는 README뿐이다.
+                         # 설계 문서 갱신 여부는 CodeRabbit이 아니라 PR 체크리스트 CONDITIONAL로 확인한다.
     - "!**/.idea/**"
     - "!**/*.iml"
     - "!**/reports/**"

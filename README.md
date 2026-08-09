@@ -5,18 +5,19 @@
 > 출발 동기: "뉴스를 봐도 내가 원하는 콘텐츠를 식별하기 어렵다." → 수집·선별·발송으로 해결.
 > 이 프로젝트의 핵심 서사는 **구독자 규모를 키우며 발송 배치의 병목을 측정하고 개선해 나가는 과정**이다.
 
-## 🤖 에이전트 하네스로 개발합니다
+## 🤖 개발 운영 기록
 
-이 레포는 일회성 코드 생성이 아니라 **에이전트 하네스**(규칙·스킬·권한 게이트·루프 프로토콜·외부화된 컨텍스트) 위에서 개발됩니다. 어떻게 운영하는지가 코드만큼 중요한 산출물입니다.
+이 레포의 개발 운영 방식과 설계 결정은 `sift-docs`에 기록됩니다. 과거에는 별도 `sift-harness`를 사용했지만, 현재는 삭제했으며 원격 환경이 필요해질 때 새로 구성합니다.
 
 | 위치 | 내용 |
 |---|---|
-| [siftnews/sift-docs](https://github.com/siftnews/sift-docs) | 하네스 설계(HARNESS)·기획(PLAN)·루프 운영 기록(STATE·BACKLOG·TASKS·DECISIONS) — **커밋 히스토리 자체가 루프를 실제로 운영한 증거** |
-| [.claude/settings.json](.claude/settings.json) | 권한 게이트 — 커밋·push·병합 등 되돌리기 어려운 작업은 deny, 사람이 최종 수행 |
-| [.claude/skills/](.claude/skills/) | 자작 스킬 — 반복 작업(유스케이스 구현·단위 테스트) 표준화 |
-| [docs/](docs/) | 이 레포 종속 설계 문서 — 코드와 같은 PR에서 리뷰·정합 유지 (D-021) |
+| [siftnews/sift-docs](https://github.com/siftnews/sift-docs) | 설계·기획·코드 규약·결정·루프 운영 기록의 원본 — 커밋 히스토리 자체가 운영 기록 |
 
-작업 단위는 **이슈 → 브랜치 → PR → 리뷰 → 병합** 흐름을 따르며, git/GitHub 쓰기는 사람이 직접 수행합니다 (에이전트는 초안·구현·자가검증까지).
+**설계 문서도 `sift-docs`에 있습니다** — ERD·배치 명세([MVP-DESIGN](https://github.com/siftnews/sift-docs/blob/main/references/MVP-DESIGN.md)), 선별 파이프라인([SELECTION](https://github.com/siftnews/sift-docs/blob/main/references/SELECTION.md)), 도메인 이벤트([EVENTS](https://github.com/siftnews/sift-docs/blob/main/references/EVENTS.md)). 이 레포에는 코드만 둡니다 (D-038).
+
+작업 단위는 **이슈 → 브랜치 → PR → 리뷰 → 병합** 흐름을 따릅니다. 과거의 역할 분리·권한 프로파일 운영은 `sift-docs`에 기록으로 남아 있으며 현재 활성 하네스는 없습니다.
+
+이슈·PR 생성과 커밋·push는 **에이전트가 실행**하고(기록은 저자 명의), **병합·리뷰 승인·이슈 close·릴리스는 사람**이 수행합니다.
 
 ## 아키텍처
 
@@ -27,7 +28,7 @@
 - **Spring Batch Job = 인바운드 어댑터** — 도메인은 배치를 모른다
 - 발송 수단은 `SendEmailPort` 뒤로 추상화 (로컬 SMTP ↔ SES 프로파일 전환)
 
-설계 문서: [MVP-DESIGN](docs/MVP-DESIGN.md) (ERD·배치 Job/Step·포트) · [SELECTION](docs/SELECTION.md) (선별 파이프라인) · [EVENTS](docs/EVENTS.md) (도메인 이벤트) — 상위 기획은 [sift-docs의 PLAN](https://github.com/siftnews/sift-docs/blob/main/PLAN.md)
+상세 설계는 [MVP-DESIGN](https://github.com/siftnews/sift-docs/blob/main/references/MVP-DESIGN.md) (ERD·배치 Job/Step·포트) · [SELECTION](https://github.com/siftnews/sift-docs/blob/main/references/SELECTION.md) (선별 파이프라인) · [EVENTS](https://github.com/siftnews/sift-docs/blob/main/references/EVENTS.md) (도메인 이벤트), 상위 기획은 [PLAN](https://github.com/siftnews/sift-docs/blob/main/references/PLAN.md), 코드 규약은 [coding-conventions](https://github.com/siftnews/sift-docs/blob/main/references/coding-conventions.md)
 
 ## 시작하기
 

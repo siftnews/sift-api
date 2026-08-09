@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  description가 없는 실제 피드 패턴 — 2026-07-26 e2e에서 이 두 형태 때문에
+  한국경제·토스 수집이 통째로 실패했다(NPE).
+   - 1번 item: title/link/pubDate만 (한국경제 패턴)
+   - 2번 item: description 대신 content:encoded (토스 패턴)
+-->
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+    <channel>
+        <title>Missing Description Feed</title>
+        <link>https://example.com</link>
+        <description>description 없는 항목이 섞인 피드</description>
+        <item>
+            <title>본문 없는 기사</title>
+            <link>https://example.com/articles/no-description</link>
+            <pubDate>Wed, 15 Jul 2026 10:00:00 GMT</pubDate>
+        </item>
+        <item>
+            <title>content로만 본문을 싣는 기사</title>
+            <link>https://example.com/articles/content-encoded</link>
+            <pubDate>Wed, 15 Jul 2026 11:00:00 GMT</pubDate>
+            <content:encoded><![CDATA[<p>content:encoded 본문</p>]]></content:encoded>
+        </item>
+    </channel>
+</rss>

@@ -1,6 +1,7 @@
 package com.siftnews.source.adapter.out.persistence;
 
 import com.siftnews.source.application.port.out.LoadActiveSourcesPort;
+import com.siftnews.source.application.port.out.SaveSourcePort;
 import com.siftnews.source.application.port.out.UpdateSourcePort;
 import com.siftnews.source.domain.Source;
 import com.siftnews.source.domain.SourceException;
@@ -8,15 +9,17 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
-class SourcePersistenceAdapter implements LoadActiveSourcesPort, UpdateSourcePort {
+class SourcePersistenceAdapter implements LoadActiveSourcesPort, UpdateSourcePort, SaveSourcePort {
 
     private final SourceJpaRepository sourceJpaRepository;
+    private final Clock clock;
 
     @Override
     public List<Source> loadActive() {
@@ -29,6 +32,18 @@ class SourcePersistenceAdapter implements LoadActiveSourcesPort, UpdateSourcePor
     public Optional<Source> findActiveById(Long sourceId) {
         return sourceJpaRepository.findByIdAndActiveTrue(sourceId)
                 .map(SourceMapper::toDomain);
+    }
+
+    @Override
+    @Transactional
+    public int saveNew(List<Source> sources) {
+        Instant now = clock.instant();
+        int inserted = 0;
+        for (Source source : sources) {
+            inserted += sourceJpaRepository.insertIfAbsent(source.getName(), source.getType().name(),
+                    source.getUrl(), source.getLang(), source.getCategory().name(), source.isActive(), now);
+        }
+        return inserted;
     }
 
     @Override

@@ -2,6 +2,7 @@ package com.siftnews.support;
 
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.containers.PostgreSQLContainer;
 
@@ -23,6 +24,7 @@ import static com.siftnews.support.TestContainerImages.POSTGRES_IMAGE;
  */
 @SpringBootTest
 @ActiveProfiles("test")
+@Import(FixedClockTestConfig.class)
 public abstract class AbstractIntegrationTest {
 
     @ServiceConnection

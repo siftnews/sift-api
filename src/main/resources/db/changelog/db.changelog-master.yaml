@@ -1,0 +1,11 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/changes/0001-create-application-schema.sql
+  - include:
+      file: db/changelog/changes/0002-create-batch-schema.sql
+  - include:
+      file: db/changelog/changes/0003-backfill-normalized-article-url.sql
+  - include:
+      file: db/changelog/changes/0004-create-subscriber-schema.sql
+  - include:
+      file: db/changelog/changes/0005-create-delivery-schema.sql

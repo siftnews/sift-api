@@ -1,8 +1,13 @@
 spring:
+  liquibase:
+    # 테스트 컨텍스트가 공유하는 Testcontainers DB를 컨텍스트마다 초기화해 테스트 간
+    # 시더·배치 데이터가 누적되지 않게 한다. 운영 프로파일에서는 사용하지 않는다.
+    drop-first: true
   # datasource 는 Testcontainers @ServiceConnection 이 주입한다.
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      # 테스트도 운영과 같은 Liquibase 스키마를 사용해 changelog drift를 검출한다.
+      ddl-auto: validate
     open-in-view: false
     properties:
       hibernate:
@@ -10,6 +15,6 @@ spring:
   # 배치 메타테이블은 테스트 컨텍스트에서 필요 시 초기화한다.
   batch:
     jdbc:
-      initialize-schema: always
+      initialize-schema: never
     job:
       enabled: false

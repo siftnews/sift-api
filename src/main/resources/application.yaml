@@ -14,11 +14,55 @@ spring:
     job:
       enabled: false          # 부팅 시 Job 자동 실행 금지 (스케줄/트리거로 기동)
 
+  task:
+    scheduling:
+      pool:
+        # 기본값 1이면 수집·선별·발송·재시도 트리거가 한 스레드를 두고 줄을 선다 —
+        # 하나의 배치 기동이 오래 걸려도 다른 주기가 밀리지 않도록 트리거 수만큼 확보한다.
+        size: 4
+
+sift:
+  collection:
+    # 수집 주기 (MVP-DESIGN §3①). 매시 정각은 수집기가 몰리는 시각이라 10분 비켜 둔다
+    cron: "0 10 * * * *"
+    zone: Asia/Seoul
+
+  selection:
+    # 매일 발행 기준 시각 (D-019). 운영값은 프로파일에서 override
+    cron: "0 0 6 * * *"
+    zone: Asia/Seoul
+    # 후보 윈도우 크기 — 발행이 하루 한 번이고 topic.recency_half_life_hours 기본값도 24라 정렬을 맞춘다
+    window-hours: 24
+
+  delivery:
+    cron: "0 0 * * * *"
+    zone: Asia/Seoul
+    retry:
+      cron: "0 */5 * * * *"
+      zone: Asia/Seoul
+      max-attempts: 3
+      base-delay-seconds: 60
+      max-delay-seconds: 3600
+
 management:
+  # profile/default 변경으로 scrape endpoint가 조용히 비활성화되지 않도록 명시한다.
+  prometheus:
+    metrics:
+      export:
+        enabled: true
   endpoints:
     web:
       exposure:
-        include: health, info, modulith   # prometheus는 micrometer 레지스트리 추가 시 노출
+        include: health, info, modulith, prometheus
+  metrics:
+    distribution:
+      # 발송 단계의 Prometheus histogram으로 V1 기준선에서 p95를 집계할 수 있게 한다.
+      percentiles-histogram:
+        "[sift.delivery.dispatch.duration]": true
+        "[sift.delivery.snapshot.duration]": true
+        "[sift.delivery.send.duration]": true
+        "[sift.delivery.retry.duration]": true
+        "[sift.delivery.retry.job.duration]": true
 
 logging:
   level:
