@@ -45,10 +45,24 @@ sift:
       max-delay-seconds: 3600
 
 management:
+  # profile/default 변경으로 scrape endpoint가 조용히 비활성화되지 않도록 명시한다.
+  prometheus:
+    metrics:
+      export:
+        enabled: true
   endpoints:
     web:
       exposure:
-        include: health, info, modulith   # prometheus는 micrometer 레지스트리 추가 시 노출
+        include: health, info, modulith, prometheus
+  metrics:
+    distribution:
+      # 발송 단계의 Prometheus histogram으로 V1 기준선에서 p95를 집계할 수 있게 한다.
+      percentiles-histogram:
+        "[sift.delivery.dispatch.duration]": true
+        "[sift.delivery.snapshot.duration]": true
+        "[sift.delivery.send.duration]": true
+        "[sift.delivery.retry.duration]": true
+        "[sift.delivery.retry.job.duration]": true
 
 logging:
   level:
