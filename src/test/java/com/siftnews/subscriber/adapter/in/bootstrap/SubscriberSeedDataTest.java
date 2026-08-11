@@ -38,10 +38,22 @@ class SubscriberSeedDataTest {
     }
 
     @Test
+    void createsOverloadWorkloadWithOnePreferredSendHour() {
+        var subscribers = SubscriberSeedData.subscribers(1_000, EMAIL_DOMAIN,
+                LoadtestScenario.OVERLOAD, 8);
+
+        assertThat(subscribers).extracting(Subscriber::getPreferredSendHour)
+                .containsOnly(8);
+    }
+
+    @Test
     void rejectsNegativeCountAndBlankDomain() {
         assertThatThrownBy(() -> SubscriberSeedData.subscribers(-1, EMAIL_DOMAIN))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> SubscriberSeedData.subscribers(1, " "))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> SubscriberSeedData.subscribers(1, EMAIL_DOMAIN,
+                LoadtestScenario.REALISTIC, 24))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

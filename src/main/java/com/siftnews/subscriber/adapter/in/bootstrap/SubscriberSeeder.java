@@ -25,21 +25,33 @@ class SubscriberSeeder implements ApplicationRunner {
     private final SeedSubscribersUseCase seedSubscribersUseCase;
     private final int count;
     private final String emailDomain;
+    private final LoadtestScenario scenario;
+    private final int overloadSendHour;
 
     SubscriberSeeder(
             SeedSubscribersUseCase seedSubscribersUseCase,
             @Value("${sift.load-test.subscribers.count:" + SubscriberSeedData.DEFAULT_COUNT + "}") int count,
             @Value("${sift.load-test.subscribers.email-domain:" + SubscriberSeedData.DEFAULT_EMAIL_DOMAIN + "}")
-            String emailDomain
+            String emailDomain,
+            @Value("${sift.load-test.workload.scenario:realistic}") String scenario,
+            @Value("${sift.load-test.workload.overload-send-hour:8}") int overloadSendHour
     ) {
         this.seedSubscribersUseCase = seedSubscribersUseCase;
         this.count = count;
         this.emailDomain = emailDomain;
+        this.scenario = LoadtestScenario.parse(scenario);
+        this.overloadSendHour = overloadSendHour;
+    }
+
+    SubscriberSeeder(SeedSubscribersUseCase seedSubscribersUseCase, int count, String emailDomain) {
+        this(seedSubscribersUseCase, count, emailDomain, "realistic", 8);
     }
 
     @Override
     public void run(ApplicationArguments args) {
-        int inserted = seedSubscribersUseCase.seed(SubscriberSeedData.subscribers(count, emailDomain));
-        log.info("loadtest subscriber seeder 종료: 요청 {}건 · 신규 {}건", count, inserted);
+        int inserted = seedSubscribersUseCase.seed(
+                SubscriberSeedData.subscribers(count, emailDomain, scenario, overloadSendHour));
+        log.info("loadtest subscriber seeder 종료: scenario={} · 요청 {}건 · 신규 {}건",
+                scenario.name().toLowerCase(), count, inserted);
     }
 }

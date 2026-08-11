@@ -3,6 +3,7 @@ package com.siftnews.content.adapter.out.persistence;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.siftnews.content.application.port.out.LoadTopicPort;
+import com.siftnews.content.application.port.out.LoadTopicBySlugPort;
 import com.siftnews.content.application.port.out.SaveTopicPort;
 import com.siftnews.content.domain.ContentException;
 import com.siftnews.content.domain.Topic;
@@ -17,7 +18,7 @@ import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
-class TopicPersistenceAdapter implements LoadTopicPort, SaveTopicPort {
+class TopicPersistenceAdapter implements LoadTopicPort, LoadTopicBySlugPort, SaveTopicPort {
 
     private final TopicJpaRepository topicJpaRepository;
     private final ObjectMapper objectMapper;
@@ -26,6 +27,11 @@ class TopicPersistenceAdapter implements LoadTopicPort, SaveTopicPort {
     @Override
     public Optional<Topic> load(Long topicId) {
         return topicJpaRepository.findById(topicId).map(TopicMapper::toDomain);
+    }
+
+    @Override
+    public Optional<Topic> loadBySlug(String slug) {
+        return topicJpaRepository.findBySlug(slug).map(TopicMapper::toDomain);
     }
 
     @Override

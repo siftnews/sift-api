@@ -10,7 +10,7 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile("!test")
+@Profile("!test & !loadtest")
 @RequiredArgsConstructor
 class LocalSmtpAdapter implements SendEmailPort {
 

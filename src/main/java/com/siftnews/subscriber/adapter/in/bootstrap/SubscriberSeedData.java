@@ -32,17 +32,30 @@ final class SubscriberSeedData {
     }
 
     static List<Subscriber> subscribers(int count, String emailDomain) {
+        return subscribers(count, emailDomain, LoadtestScenario.REALISTIC, 8);
+    }
+
+    static List<Subscriber> subscribers(int count, String emailDomain,
+                                        LoadtestScenario scenario, int overloadSendHour) {
         if (count < 0) {
             throw new IllegalArgumentException("subscriber seed count는 0 이상이어야 합니다: " + count);
         }
         if (emailDomain == null || emailDomain.isBlank()) {
             throw new IllegalArgumentException("subscriber seed email domain이 필요합니다.");
         }
+        if (scenario == null) {
+            throw new IllegalArgumentException("loadtest workload scenario가 필요합니다.");
+        }
+        if (overloadSendHour < 0 || overloadSendHour > 23) {
+            throw new IllegalArgumentException("overload send hour는 0~23이어야 합니다: " + overloadSendHour);
+        }
 
         return IntStream.range(0, count)
                 .mapToObj(index -> Subscriber.create(
                         "subscriber-%06d@%s".formatted(index + 1, emailDomain),
-                        PREFERRED_SEND_HOURS[index % PREFERRED_SEND_HOURS.length]))
+                        scenario == LoadtestScenario.OVERLOAD
+                                ? overloadSendHour
+                                : PREFERRED_SEND_HOURS[index % PREFERRED_SEND_HOURS.length]))
                 .toList();
     }
 
