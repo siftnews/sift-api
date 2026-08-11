@@ -23,9 +23,13 @@ import java.util.concurrent.locks.LockSupport;
 @Profile("loadtest & !test")
 class LoadtestSendEmailAdapter implements SendEmailPort {
 
+    private static final String MAIL_DURATION_METRIC = "sift.delivery.loadtest.mail.duration";
+
     private final MeterRegistry meterRegistry;
     private final Counter sentCounter;
     private final Counter failedCounter;
+    private final Timer sentTimer;
+    private final Timer failedTimer;
     private final int failureEvery;
     private final long processingDelayMillis;
     private final AtomicLong sendSequence = new AtomicLong();
@@ -46,6 +50,12 @@ class LoadtestSendEmailAdapter implements SendEmailPort {
         this.meterRegistry = meterRegistry;
         this.sentCounter = meterRegistry.counter("sift.delivery.loadtest.mail.sent");
         this.failedCounter = meterRegistry.counter("sift.delivery.loadtest.mail.failed");
+        this.sentTimer = Timer.builder(MAIL_DURATION_METRIC)
+                .tag("status", "sent")
+                .register(meterRegistry);
+        this.failedTimer = Timer.builder(MAIL_DURATION_METRIC)
+                .tag("status", "failed")
+                .register(meterRegistry);
         this.failureEvery = failureEvery;
         this.processingDelayMillis = processingDelayMillis;
     }
@@ -69,9 +79,7 @@ class LoadtestSendEmailAdapter implements SendEmailPort {
             failedCounter.increment();
             throw exception;
         } finally {
-            sample.stop(Timer.builder("sift.delivery.loadtest.mail.duration")
-                    .tag("status", status)
-                    .register(meterRegistry));
+            sample.stop("failed".equals(status) ? failedTimer : sentTimer);
         }
     }
 }
