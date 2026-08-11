@@ -22,6 +22,17 @@ class SubscriberSeederTest {
                 .allMatch(email -> email.endsWith("@runner-test.sift.local"));
     }
 
+    @Test
+    void passesOverloadScenarioToSeedData() throws Exception {
+        var fake = new FakeSeedSubscribersUseCase();
+
+        new SubscriberSeeder(fake, 24, "runner-test.sift.local", "overload", 10).run(null);
+
+        assertThat(fake.subscribers)
+                .extracting(Subscriber::getPreferredSendHour)
+                .containsOnly(10);
+    }
+
     private static final class FakeSeedSubscribersUseCase implements SeedSubscribersUseCase {
 
         private List<Subscriber> subscribers = List.of();

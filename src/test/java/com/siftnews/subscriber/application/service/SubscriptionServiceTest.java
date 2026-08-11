@@ -105,5 +105,10 @@ class SubscriptionServiceTest {
         public Optional<TopicReference> findActive(Long topicId) {
             return Optional.of(new TopicReference(topicId));
         }
+
+        @Override
+        public Optional<TopicReference> findActiveBySlug(String slug) {
+            return Optional.of(new TopicReference(1L));
+        }
     }
 }

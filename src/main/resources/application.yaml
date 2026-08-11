@@ -61,6 +61,7 @@ management:
         "[sift.delivery.dispatch.duration]": true
         "[sift.delivery.snapshot.duration]": true
         "[sift.delivery.send.duration]": true
+        "[sift.delivery.loadtest.mail.duration]": true
         "[sift.delivery.retry.duration]": true
         "[sift.delivery.retry.job.duration]": true
 

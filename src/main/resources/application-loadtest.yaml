@@ -3,3 +3,12 @@ sift:
     subscribers:
       count: 100000
       email-domain: loadtest.sift.local
+    workload:
+      topic-slug: dev
+      # realistic은 D-019 선호 시각 패턴, overload는 한 시각 집중 시나리오다.
+      scenario: realistic
+      overload-send-hour: 8
+    mail:
+      # 0이면 실패 주입 없음. SMTP 설정이 있어도 loadtest sink는 네트워크를 사용하지 않는다.
+      failure-every: 0
+      processing-delay-ms: 0

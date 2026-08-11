@@ -7,10 +7,13 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 interface TopicJpaRepository extends JpaRepository<TopicJpaEntity, Long> {
 
     List<TopicJpaEntity> findByActiveTrue();
+
+    Optional<TopicJpaEntity> findBySlug(String slug);
 
     /**
      * slug가 이미 있으면 아무것도 하지 않고 저장하며, 삽입된 행 수(0 또는 1)를 돌려준다.
