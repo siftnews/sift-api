@@ -29,7 +29,7 @@ sift:
 
   selection:
     # 매일 발행 기준 시각 (D-019). 운영값은 프로파일에서 override
-    cron: "0 0 6 * * *"
+    cron: "0 0 0 * * *"
     zone: Asia/Seoul
     # 후보 윈도우 크기 — 발행이 하루 한 번이고 topic.recency_half_life_hours 기본값도 24라 정렬을 맞춘다
     window-hours: 24

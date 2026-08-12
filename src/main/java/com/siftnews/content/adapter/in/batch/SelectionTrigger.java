@@ -59,8 +59,8 @@ class SelectionTrigger {
         this.zone = ZoneId.of(zone);
     }
 
-    /** 기본 매일 06:00 (D-019 "매일 발행 기준 시각"). 운영값은 설정으로 바꾼다. */
-    @Scheduled(cron = "${sift.selection.cron:0 0 6 * * *}", zone = "${sift.selection.zone:Asia/Seoul}")
+    /** 기본 매일 00:00 (D-019 "매일 발행 기준 시각"). 운영값은 설정으로 바꾼다. */
+    @Scheduled(cron = "${sift.selection.cron:0 0 0 * * *}", zone = "${sift.selection.zone:Asia/Seoul}")
     void triggerDailySelection() {
         Instant to = clock.instant();
         Instant from = to.minus(windowSize);
