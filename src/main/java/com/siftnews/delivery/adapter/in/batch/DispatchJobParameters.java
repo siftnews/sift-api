@@ -6,6 +6,7 @@ final class DispatchJobParameters {
     static final String TOPIC_ID = "topicId";
     static final String SEND_HOUR = "sendHour";
     static final String LAUNCHED_AT = "launchedAt";
+    static final String RUN_ID = "runId";
 
     private DispatchJobParameters() {
     }
