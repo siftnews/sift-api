@@ -158,9 +158,9 @@ jobs:
             printf 'CLOUD_SQL_HOST=%s\n' "${sql_host}"
             printf 'CLOUD_SQL_PORT=5432\n'
             printf 'DB_NAME=sift\n'
-            printf 'DB_USERNAME=sift\n'
+            printf 'DB_USERNAME=siftapp\n'
             printf 'DB_PASSWORD=%s\n' "${db_password}"
-            printf 'MAIL_HOST=localhost\n'
+            printf 'MAIL_HOST=mailpit\n'
             printf 'MAIL_PORT=1025\n'
             printf 'API_PORT=8080\n'
             printf 'PROMETHEUS_PORT=9090\n'
