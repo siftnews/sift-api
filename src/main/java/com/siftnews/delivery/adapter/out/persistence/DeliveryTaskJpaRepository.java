@@ -12,6 +12,8 @@ import java.util.List;
 
 interface DeliveryTaskJpaRepository extends JpaRepository<DeliveryTaskJpaEntity, Long> {
 
+    int countByDeliveryJobId(Long deliveryJobId);
+
     List<DeliveryTaskJpaEntity> findByDeliveryJobIdAndStatusOrderByIdAsc(Long deliveryJobId,
                                                                           DeliveryTaskStatus status,
                                                                           Pageable pageable);

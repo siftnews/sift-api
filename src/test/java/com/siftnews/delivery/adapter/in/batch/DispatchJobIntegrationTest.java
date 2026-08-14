@@ -3,6 +3,7 @@ package com.siftnews.delivery.adapter.in.batch;
 import com.siftnews.support.AbstractIntegrationTest;
 import com.siftnews.support.TestDatabaseFixtures;
 import com.siftnews.delivery.application.port.in.DispatchIssueUseCase;
+import com.siftnews.delivery.application.port.out.UpdateDeliveryJobPort;
 import com.siftnews.delivery.application.port.out.UpdateDeliveryTaskPort;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
@@ -57,6 +58,9 @@ class DispatchJobIntegrationTest extends AbstractIntegrationTest {
     private DispatchIssueUseCase dispatchIssueUseCase;
 
     @Autowired
+    private UpdateDeliveryJobPort updateDeliveryJobPort;
+
+    @Autowired
     private UpdateDeliveryTaskPort updateDeliveryTaskPort;
 
     @BeforeEach
@@ -84,6 +88,49 @@ class DispatchJobIntegrationTest extends AbstractIntegrationTest {
                 .containsExactly("snapshotStep", "sendStep");
         assertThat(jdbcTemplate.queryForObject("select status from delivery_task where subscriber_id = ?",
                 String.class, SUBSCRIBER_ID)).isEqualTo("SENT");
+        assertThat(jdbcTemplate.queryForObject("select total_count from delivery_job where issue_id = ?",
+                Integer.class, ISSUE_ID)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("select status from delivery_job where issue_id = ?",
+                String.class, ISSUE_ID)).isEqualTo("DONE");
+    }
+
+    @Test
+    void keepsSnapshotCountWhenDispatchIsRepeatedIdempotently() {
+        var first = dispatchIssueUseCase.dispatch(ISSUE_ID, TOPIC_ID, SEND_HOUR);
+        var second = dispatchIssueUseCase.dispatch(ISSUE_ID, TOPIC_ID, SEND_HOUR);
+
+        assertThat(first.createdTaskCount()).isEqualTo(1);
+        assertThat(second.createdTaskCount()).isZero();
+        assertThat(jdbcTemplate.queryForObject("select count(*) from delivery_task where delivery_job_id = "
+                        + "(select id from delivery_job where issue_id = ?)", Integer.class, ISSUE_ID))
+                .isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("select total_count from delivery_job where issue_id = ?",
+                Integer.class, ISSUE_ID)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("select status from delivery_job where issue_id = ?",
+                String.class, ISSUE_ID)).isEqualTo("CREATED");
+    }
+
+    @Test
+    void keepsJobOpenUntilAllTasksReachTerminalStatus() {
+        dispatchIssueUseCase.dispatch(ISSUE_ID, TOPIC_ID, SEND_HOUR);
+        Long deliveryJobId = jdbcTemplate.queryForObject("select id from delivery_job where issue_id = ?",
+                Long.class, ISSUE_ID);
+        Long taskId = jdbcTemplate.queryForObject("select id from delivery_task where subscriber_id = ?",
+                Long.class, SUBSCRIBER_ID);
+
+        assertThat(updateDeliveryJobPort.markSending(deliveryJobId)).isEqualTo(1);
+        assertThat(updateDeliveryTaskPort.claimPending(taskId)).isEqualTo(1);
+        assertThat(updateDeliveryTaskPort.markFailed(taskId, "temporary failure", 1, NEXT_RETRY_AT))
+                .isEqualTo(1);
+        assertThat(updateDeliveryJobPort.markCompletedJobs()).isZero();
+        assertThat(jdbcTemplate.queryForObject("select status from delivery_job where id = ?", String.class,
+                deliveryJobId)).isEqualTo("SENDING");
+
+        assertThat(updateDeliveryTaskPort.claimFailed(taskId, NEXT_RETRY_AT.plusSeconds(1), 3)).isEqualTo(1);
+        assertThat(updateDeliveryTaskPort.markDead(taskId, "permanent failure", 2)).isEqualTo(1);
+        assertThat(updateDeliveryJobPort.markCompletedJobs()).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("select status from delivery_job where id = ?", String.class,
+                deliveryJobId)).isEqualTo("DONE");
     }
 
     @Test

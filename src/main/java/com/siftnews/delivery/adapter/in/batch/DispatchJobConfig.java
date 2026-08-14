@@ -29,10 +29,12 @@ class DispatchJobConfig {
     @Bean
     Job dispatchJob(JobRepository jobRepository, Step snapshotStep, Step sendStep,
                     JobParametersValidator dispatchJobParametersValidator,
-                    DispatchMetricsListener metricsListener) {
+                    DispatchMetricsListener metricsListener,
+                    DeliveryJobLifecycleListener lifecycleListener) {
         return new JobBuilder("dispatchJob", jobRepository)
                 .validator(dispatchJobParametersValidator)
                 .listener(metricsListener)
+                .listener(lifecycleListener)
                 .start(snapshotStep)
                 .next(sendStep)
                 .build();
@@ -51,12 +53,14 @@ class DispatchJobConfig {
     Step sendStep(JobRepository jobRepository, PlatformTransactionManager transactionManager,
                   @Qualifier("pendingDeliveryTaskReader") ItemStreamReader<DeliveryTask> pendingDeliveryTaskReader,
                   @Qualifier("deliveryEmailWriter") ItemWriter<DeliveryTask> deliveryEmailWriter,
-                  DispatchMetricsListener metricsListener) {
+                  DispatchMetricsListener metricsListener,
+                  DeliveryJobLifecycleListener lifecycleListener) {
         return new StepBuilder("sendStep", jobRepository)
                 .<DeliveryTask, DeliveryTask>chunk(500, transactionManager)
                 .reader(pendingDeliveryTaskReader)
                 .writer(deliveryEmailWriter)
                 .listener(metricsListener)
+                .listener(lifecycleListener)
                 .build();
     }
 
