@@ -27,7 +27,7 @@ interface DeliveryJobJpaRepository extends JpaRepository<DeliveryJobJpaEntity, L
                SET status = 'SENDING',
                    updated_at = CURRENT_TIMESTAMP
              WHERE id = :deliveryJobId
-               AND status <> 'SENDING'
+               AND status = 'CREATED'
             """, nativeQuery = true)
     int markSending(@Param("deliveryJobId") Long deliveryJobId);
 
@@ -36,7 +36,7 @@ interface DeliveryJobJpaRepository extends JpaRepository<DeliveryJobJpaEntity, L
             UPDATE delivery_job job
                SET status = 'DONE',
                    updated_at = CURRENT_TIMESTAMP
-             WHERE job.status <> 'DONE'
+             WHERE job.status = 'SENDING'
                AND NOT EXISTS (
                    SELECT 1
                      FROM delivery_task task

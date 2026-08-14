@@ -1,5 +1,6 @@
 package com.siftnews.delivery.application.service;
 
+import com.siftnews.common.BusinessException;
 import com.siftnews.delivery.application.port.in.DispatchIssueUseCase;
 import com.siftnews.delivery.application.port.in.DispatchIssueSummary;
 import com.siftnews.delivery.application.port.out.CountDeliveryTasksPort;
@@ -39,7 +40,7 @@ public class DispatchIssueService implements DispatchIssueUseCase {
         int createdTaskCount = saveDeliveryTaskPort.saveIfAbsent(tasks);
         int totalTaskCount = countDeliveryTasksPort.countByDeliveryJobId(deliveryJob.getDeliveryJobId());
         if (updateDeliveryJobPort.updateTotalCount(deliveryJob.getDeliveryJobId(), totalTaskCount) != 1) {
-            throw new IllegalStateException("발송 작업 집계 갱신에 실패했습니다: jobId="
+            throw new BusinessException("발송 작업 집계 갱신에 실패했습니다: jobId="
                     + deliveryJob.getDeliveryJobId());
         }
         log.info("[measure] delivery snapshot createdTasks={}", createdTaskCount);
