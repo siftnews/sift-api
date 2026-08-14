@@ -25,9 +25,11 @@ import java.time.Duration;
 class RetryJobConfig {
 
     @Bean
-    Job retryJob(JobRepository jobRepository, Step retryStep, RetryMetricsListener retryMetricsListener) {
+    Job retryJob(JobRepository jobRepository, Step retryStep, RetryMetricsListener retryMetricsListener,
+                 DeliveryJobLifecycleListener lifecycleListener) {
         return new JobBuilder("retryJob", jobRepository)
                 .listener(retryMetricsListener)
+                .listener(lifecycleListener)
                 .start(retryStep)
                 .build();
     }

@@ -1,10 +1,12 @@
 package com.siftnews.delivery.adapter.out.persistence;
 
+import com.siftnews.delivery.application.port.out.CountDeliveryTasksPort;
 import com.siftnews.delivery.application.port.out.LoadDeliveryJobPort;
 import com.siftnews.delivery.application.port.out.LoadPendingDeliveryTasksPort;
 import com.siftnews.delivery.application.port.out.LoadRetriableDeliveryTasksPort;
 import com.siftnews.delivery.application.port.out.SaveDeliveryJobPort;
 import com.siftnews.delivery.application.port.out.SaveDeliveryTaskPort;
+import com.siftnews.delivery.application.port.out.UpdateDeliveryJobPort;
 import com.siftnews.delivery.application.port.out.UpdateDeliveryTaskPort;
 import com.siftnews.delivery.domain.DeliveryJob;
 import com.siftnews.delivery.domain.DeliveryTask;
@@ -23,7 +25,8 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor
 class DeliveryPersistenceAdapter implements LoadDeliveryJobPort, SaveDeliveryJobPort, SaveDeliveryTaskPort,
-        LoadPendingDeliveryTasksPort, LoadRetriableDeliveryTasksPort, UpdateDeliveryTaskPort {
+        CountDeliveryTasksPort, UpdateDeliveryJobPort, LoadPendingDeliveryTasksPort,
+        LoadRetriableDeliveryTasksPort, UpdateDeliveryTaskPort {
 
     private final DeliveryJobJpaRepository deliveryJobJpaRepository;
     private final DeliveryTaskJpaRepository deliveryTaskJpaRepository;
@@ -50,6 +53,28 @@ class DeliveryPersistenceAdapter implements LoadDeliveryJobPort, SaveDeliveryJob
                     task.getEmail(), task.getStatus().name(), task.getIdempotencyKey());
         }
         return saved;
+    }
+
+    @Override
+    public int countByDeliveryJobId(Long deliveryJobId) {
+        return deliveryTaskJpaRepository.countByDeliveryJobId(deliveryJobId);
+    }
+
+    @Override
+    public int updateTotalCount(Long deliveryJobId, int totalCount) {
+        return deliveryJobJpaRepository.updateTotalCount(deliveryJobId, totalCount);
+    }
+
+    @Override
+    @Transactional
+    public int markSending(Long deliveryJobId) {
+        return deliveryJobJpaRepository.markSending(deliveryJobId);
+    }
+
+    @Override
+    @Transactional
+    public int markCompletedJobs() {
+        return deliveryJobJpaRepository.markCompletedJobs();
     }
 
     @Override
