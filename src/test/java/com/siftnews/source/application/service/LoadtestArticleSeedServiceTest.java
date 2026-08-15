@@ -6,6 +6,7 @@ import com.siftnews.source.application.port.out.SaveArticlePort;
 import com.siftnews.source.domain.Article;
 import com.siftnews.source.domain.Category;
 import com.siftnews.source.domain.Source;
+import com.siftnews.source.domain.SourceException;
 import com.siftnews.source.domain.SourceType;
 import org.junit.jupiter.api.Test;
 
@@ -52,7 +53,7 @@ class LoadtestArticleSeedServiceTest {
                 "https://fixture/selection/");
 
         assertThatThrownBy(() -> service.seed("../unsafe"))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(SourceException.class);
         assertThat(saveArticlePort.saved).isEmpty();
     }
 

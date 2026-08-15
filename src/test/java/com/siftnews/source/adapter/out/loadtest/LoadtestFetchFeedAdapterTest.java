@@ -9,19 +9,18 @@ import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.core.scope.context.StepSynchronizationManager;
 
-import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneOffset;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class LoadtestFetchFeedAdapterTest {
 
+    private static final Instant FIXTURE_PUBLISHED_AT = Instant.parse("2026-01-01T00:00:00Z");
+
     @Test
     void createsDeterministicUniqueArticlesPerSyntheticSource() {
-        Instant now = Instant.parse("2026-08-16T00:00:00Z");
         LoadtestFetchFeedAdapter adapter = new LoadtestFetchFeedAdapter(
-                Clock.fixed(now, ZoneOffset.UTC), 3, "https://fixture/articles/");
+                FIXTURE_PUBLISHED_AT, 3, "https://fixture/articles/");
         Source source = Source.restore(101L, "Loadtest source 02", SourceType.RSS,
                 "https://loadtest.sift.local/news/source-02.xml", "en", Category.DEV, true, null);
 
@@ -37,14 +36,14 @@ class LoadtestFetchFeedAdapterTest {
         assertThat(first).allSatisfy(article -> {
             assertThat(article.title()).contains("Spring");
             assertThat(article.body()).hasSizeGreaterThanOrEqualTo(200);
-            assertThat(article.publishedAt()).isEqualTo(now.minusSeconds(1));
+            assertThat(article.publishedAt()).isEqualTo(FIXTURE_PUBLISHED_AT);
         });
     }
 
     @Test
     void usesTheBatchRunIdToSeparateCollectionArticleNamespaces() {
         LoadtestFetchFeedAdapter adapter = new LoadtestFetchFeedAdapter(
-                Clock.fixed(Instant.parse("2026-08-16T00:00:00Z"), ZoneOffset.UTC),
+                FIXTURE_PUBLISHED_AT,
                 1, "https://fixture/articles/");
         Source source = Source.restore(101L, "Loadtest source 02", SourceType.RSS,
                 "https://loadtest.sift.local/news/source-02.xml", "en", Category.DEV, true, null);

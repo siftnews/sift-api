@@ -8,7 +8,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
-import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -27,19 +26,20 @@ class LoadtestFetchFeedAdapter implements FetchFeedPort {
 
     private static final Pattern SOURCE_NUMBER = Pattern.compile("source-(\\d+)\\.xml$");
 
-    private final Clock clock;
+    private final Instant fixturePublishedAt;
     private final int entriesPerSource;
     private final String articleUrlPrefix;
 
     LoadtestFetchFeedAdapter(
-            Clock clock,
+            @Value("${sift.load-test.news.collection.fixture-published-at:2026-01-01T00:00:00Z}")
+            Instant fixturePublishedAt,
             @Value("${sift.load-test.news.collection.entries-per-source:1000}") int entriesPerSource,
             @Value("${sift.load-test.news.collection.article-url-prefix:https://loadtest.sift.local/collection/articles/}")
             String articleUrlPrefix) {
         if (entriesPerSource <= 0) {
             throw new IllegalArgumentException("collection fixture entries-per-source는 양수여야 합니다.");
         }
-        this.clock = clock;
+        this.fixturePublishedAt = fixturePublishedAt;
         this.entriesPerSource = entriesPerSource;
         this.articleUrlPrefix = articleUrlPrefix;
     }
@@ -47,7 +47,6 @@ class LoadtestFetchFeedAdapter implements FetchFeedPort {
     @Override
     public List<RawArticle> fetch(Source source) {
         int sourceNumber = sourceNumber(source);
-        Instant publishedAt = clock.instant().minusSeconds(1);
         String sourceKey = "%02d".formatted(sourceNumber);
         String runId = runId();
         String title = "Spring loadtest source" + sourceKey + " article";
@@ -59,7 +58,7 @@ class LoadtestFetchFeedAdapter implements FetchFeedPort {
                         title,
                         body,
                         source.getLang(),
-                        publishedAt,
+                        fixturePublishedAt,
                         source.getCategory()))
                 .toList();
     }

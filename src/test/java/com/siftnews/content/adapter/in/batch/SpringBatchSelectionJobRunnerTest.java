@@ -1,6 +1,7 @@
 package com.siftnews.content.adapter.in.batch;
 
 import com.siftnews.content.application.port.in.SelectionJobRunSummary;
+import com.siftnews.content.domain.ContentException;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.Job;
@@ -51,7 +52,7 @@ class SpringBatchSelectionJobRunnerTest {
                 launcher, new StubJob(), Clock.fixed(NOW, ZoneOffset.UTC));
 
         assertThatThrownBy(() -> runner.run(7L, LocalDate.of(2026, 8, 16), TO, FROM))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(ContentException.class);
         assertThat(launcher.parameters).isNull();
     }
 

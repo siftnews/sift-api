@@ -5,5 +5,5 @@ import java.time.LocalDate;
 
 public interface SelectionJobRunner {
 
-    SelectionJobRunSummary run(Long topicId, LocalDate runDate, Instant from, Instant to) throws Exception;
+    SelectionJobRunSummary run(Long topicId, LocalDate runDate, Instant from, Instant to);
 }

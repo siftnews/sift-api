@@ -7,6 +7,7 @@ import com.siftnews.source.application.port.out.SaveArticlePort;
 import com.siftnews.source.domain.Article;
 import com.siftnews.source.domain.RawArticle;
 import com.siftnews.source.domain.Source;
+import com.siftnews.source.domain.SourceException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
@@ -122,7 +123,7 @@ class LoadtestArticleSeedService implements SeedLoadtestArticlesUseCase {
 
     private static void validateRunId(String runId) {
         if (runId == null || !RUN_ID_PATTERN.matcher(runId).matches()) {
-            throw new IllegalArgumentException("runId는 영문·숫자·하이픈·밑줄 1~64자여야 합니다.");
+            throw new SourceException("runId는 영문·숫자·하이픈·밑줄 1~64자여야 합니다.");
         }
     }
 }

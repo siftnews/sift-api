@@ -1,6 +1,7 @@
 package com.siftnews.source.adapter.in.batch;
 
 import com.siftnews.source.application.port.in.CollectionJobRunSummary;
+import com.siftnews.source.domain.SourceException;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobExecution;
@@ -19,6 +20,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class SpringBatchCollectionJobRunnerTest {
 
@@ -40,6 +42,27 @@ class SpringBatchCollectionJobRunnerTest {
         assertThat(launcher.parameters.getString(CollectionJobParameters.RUN_ID)).isEqualTo("run-1");
     }
 
+    @Test
+    void wrapsJobLauncherFailureAtTheApplicationPortBoundary() {
+        RecordingJobLauncher launcher = new RecordingJobLauncher(execution());
+        launcher.willFail(new IllegalStateException("launcher failure"));
+        SpringBatchCollectionJobRunner runner = new SpringBatchCollectionJobRunner(
+                launcher, new StubJob(), Clock.fixed(NOW, ZoneOffset.UTC));
+
+        assertThatThrownBy(() -> runner.run("run-1"))
+                .isInstanceOf(SourceException.class)
+                .hasCauseInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void rejectsBlankRunIdWithASourceException() {
+        SpringBatchCollectionJobRunner runner = new SpringBatchCollectionJobRunner(
+                new RecordingJobLauncher(execution()), new StubJob(), Clock.fixed(NOW, ZoneOffset.UTC));
+
+        assertThatThrownBy(() -> runner.run(" "))
+                .isInstanceOf(SourceException.class);
+    }
+
     private static JobExecution execution() {
         JobParameters parameters = new JobParameters();
         JobExecution execution = new JobExecution(new JobInstance(42L, "collectionJob"), parameters);
@@ -59,15 +82,23 @@ class SpringBatchCollectionJobRunnerTest {
         private final JobExecution execution;
         private Job job;
         private JobParameters parameters;
+        private RuntimeException failure;
 
         private RecordingJobLauncher(JobExecution execution) {
             this.execution = execution;
+        }
+
+        private void willFail(RuntimeException failure) {
+            this.failure = failure;
         }
 
         @Override
         public JobExecution run(Job job, JobParameters jobParameters)
                 throws JobExecutionAlreadyRunningException, JobRestartException,
                 JobInstanceAlreadyCompleteException, JobParametersInvalidException {
+            if (failure != null) {
+                throw failure;
+            }
             this.job = job;
             this.parameters = jobParameters;
             return execution;

@@ -43,20 +43,23 @@ class LoadtestCollectionControllerTest {
                 .andExpect(jsonPath("$.sourceSkipCount").value(0))
                 .andExpect(jsonPath("$.elapsedMs").value(1234));
         assertThat(runner.runs).isEqualTo(1);
+        assertThat(runner.receivedRunId).isEqualTo("collection-1");
     }
 
     private static final class RecordingRunner implements CollectionJobRunner {
         private int runs;
+        private String receivedRunId;
 
         @Override
         public CollectionJobRunSummary run() {
-            runs++;
-            return new CollectionJobRunSummary("collection-1", 77L, "COMPLETED", "COMPLETED", 10, 10, 0, 1234);
+            return run("generated-run");
         }
 
         @Override
         public CollectionJobRunSummary run(String runId) {
-            return run();
+            runs++;
+            receivedRunId = runId;
+            return new CollectionJobRunSummary(runId, 77L, "COMPLETED", "COMPLETED", 10, 10, 0, 1234);
         }
     }
 }
