@@ -9,6 +9,8 @@ final class SelectionJobParameters {
     static final String WINDOW_TO = "to";
     /** 재실행을 허용하기 위한 식별 파라미터 — 없으면 같은 날 재기동이 이미 완료된 인스턴스로 거부된다. */
     static final String LAUNCHED_AT = "launchedAt";
+    /** 같은 밀리초의 수동 요청도 서로 다른 JobInstance로 만드는 보조 식별자. */
+    static final String RUN_ID = "runId";
 
     private SelectionJobParameters() {
     }

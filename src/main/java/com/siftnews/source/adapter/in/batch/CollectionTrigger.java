@@ -1,17 +1,11 @@
 package com.siftnews.source.adapter.in.batch;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.JobParametersBuilder;
-import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.beans.factory.annotation.Qualifier;
+import com.siftnews.source.application.port.in.CollectionJobRunSummary;
+import com.siftnews.source.application.port.in.CollectionJobRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-
-import java.time.Clock;
 
 /**
  * 수집 주기 트리거 (MVP-DESIGN §3①) — collectionJob을 주기 기동한다.
@@ -28,16 +22,10 @@ import java.time.Clock;
 @Profile("!test")
 class CollectionTrigger {
 
-    private final JobLauncher jobLauncher;
-    private final Job collectionJob;
-    private final Clock clock;
+    private final CollectionJobRunner collectionJobRunner;
 
-    CollectionTrigger(JobLauncher jobLauncher,
-                      @Qualifier("collectionJob") Job collectionJob,
-                      Clock clock) {
-        this.jobLauncher = jobLauncher;
-        this.collectionJob = collectionJob;
-        this.clock = clock;
+    CollectionTrigger(CollectionJobRunner collectionJobRunner) {
+        this.collectionJobRunner = collectionJobRunner;
     }
 
     /**
@@ -46,24 +34,13 @@ class CollectionTrigger {
      */
     @Scheduled(cron = "${sift.collection.cron:0 10 * * * *}", zone = "${sift.collection.zone:Asia/Seoul}")
     void triggerCollection() {
-        JobParameters parameters = parameters();
-        log.info("collectionTrigger 시작: launchedAt={}", parameters.getLong(CollectionJobParameters.LAUNCHED_AT));
-
         try {
-            JobExecution execution = jobLauncher.run(collectionJob, parameters);
-            log.info("collectionJob 종료: executionId={} status={}", execution.getId(), execution.getStatus());
+            CollectionJobRunSummary summary = collectionJobRunner.run();
+            log.info("collectionTrigger 종료: executionId={} status={}", summary.executionId(), summary.status());
         } catch (Exception e) {
             // 기동 실패로 스케줄러 스레드를 죽이지 않는다 — 다음 주기에 다시 시도한다.
             // (소스별 fetch 실패는 여기까지 오지 않고 collectStep의 skip으로 격리된다)
             log.error("collectionJob 기동 실패 — 다음 주기에 다시 시도한다", e);
         }
-    }
-
-    private JobParameters parameters() {
-        return new JobParametersBuilder()
-                // 식별 파라미터로 둬야 매 주기 기동이 새 JobInstance가 된다.
-                // 수집은 중복 무시 저장이라 재실행이 멱등이다 (CollectionJobParameters 참조).
-                .addLong(CollectionJobParameters.LAUNCHED_AT, clock.millis())
-                .toJobParameters();
     }
 }

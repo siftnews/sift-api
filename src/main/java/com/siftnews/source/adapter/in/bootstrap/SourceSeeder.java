@@ -16,8 +16,9 @@ import org.springframework.stereotype.Component;
  * 않는다. 심을 카탈로그는 {@link SourceSeedData}가 들고 있고, 저장은
  * {@link SeedSourcesUseCase} → {@code SaveSourcePort} → persistence 어댑터로 흐른다.
  * <p>
- * {@code test} 프로파일에서는 동작하지 않는다({@code @Profile("!test")}) — 통합 테스트는
- * 자기 데이터를 직접 준비한다(CLAUDE.md). Liquibase 마이그레이션 전환은 후속(MVP-DESIGN §2).
+ * {@code test}와 {@code loadtest} 프로파일에서는 동작하지 않는다 — 통합 테스트는 자기 데이터를
+ * 직접 준비하고, loadtest는 별도 synthetic source seeder가 운영 소스와 분리된 대상을 준비한다.
+ * (Liquibase 마이그레이션 전환은 후속, MVP-DESIGN §2).
  * <p>
  * {@link Order}가 필요한 이유: Spring Batch의 {@code JobLauncherApplicationRunner}는 order가
  * {@code 0}인데 {@code @Order} 없는 러너는 {@link Ordered#LOWEST_PRECEDENCE}(맨 끝)라,
@@ -25,7 +26,7 @@ import org.springframework.stereotype.Component;
  * 수집한다. 시드는 다른 러너의 전제이므로 가장 먼저 실행한다.
  */
 @Component
-@Profile("!test")
+@Profile("!test & !loadtest")
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @RequiredArgsConstructor
 class SourceSeeder implements ApplicationRunner {

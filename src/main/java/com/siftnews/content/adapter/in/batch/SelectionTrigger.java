@@ -3,11 +3,7 @@ package com.siftnews.content.adapter.in.batch;
 import com.siftnews.content.application.port.out.LoadTopicPort;
 import com.siftnews.content.domain.Topic;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.JobParametersBuilder;
-import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.beans.factory.annotation.Qualifier;
+import com.siftnews.content.application.port.in.SelectionJobRunner;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -38,21 +34,18 @@ import java.util.List;
 @Profile("!test")
 class SelectionTrigger {
 
-    private final JobLauncher jobLauncher;
-    private final Job selectionJob;
+    private final SelectionJobRunner selectionJobRunner;
     private final LoadTopicPort loadTopicPort;
     private final Clock clock;
     private final Duration windowSize;
     private final ZoneId zone;
 
-    SelectionTrigger(JobLauncher jobLauncher,
-                     @Qualifier("selectionJob") Job selectionJob,
+    SelectionTrigger(SelectionJobRunner selectionJobRunner,
                      LoadTopicPort loadTopicPort,
                      Clock clock,
                      @Value("${sift.selection.window-hours:24}") int windowHours,
                      @Value("${sift.selection.zone:Asia/Seoul}") String zone) {
-        this.jobLauncher = jobLauncher;
-        this.selectionJob = selectionJob;
+        this.selectionJobRunner = selectionJobRunner;
         this.loadTopicPort = loadTopicPort;
         this.clock = clock;
         this.windowSize = Duration.ofHours(windowHours);
@@ -71,23 +64,11 @@ class SelectionTrigger {
 
         for (Topic topic : topics) {
             try {
-                jobLauncher.run(selectionJob, parameters(topic.getTopicId(), runDate, from, to));
+                selectionJobRunner.run(topic.getTopicId(), runDate, from, to);
             } catch (Exception e) {
                 // 한 토픽의 실패가 나머지 토픽의 발행을 막지 않는다 — 수집의 소스별 skip과 같은 격리.
                 log.error("selectionJob 기동 실패: topicId={} runDate={}", topic.getTopicId(), runDate, e);
             }
         }
-    }
-
-    private JobParameters parameters(Long topicId, LocalDate runDate, Instant from, Instant to) {
-        return new JobParametersBuilder()
-                .addLong(SelectionJobParameters.TOPIC_ID, topicId)
-                .addString(SelectionJobParameters.RUN_DATE, runDate.toString())
-                .addString(SelectionJobParameters.WINDOW_FROM, from.toString())
-                .addString(SelectionJobParameters.WINDOW_TO, to.toString())
-                // 식별 파라미터로 둬야 같은 날 재기동이 "이미 완료된 인스턴스"로 거부되지 않는다.
-                // 세 Step 모두 재실행 멱등이므로(D-031·upsert) 다시 돌아도 결과가 덧나지 않는다.
-                .addLong(SelectionJobParameters.LAUNCHED_AT, clock.millis())
-                .toJobParameters();
     }
 }
