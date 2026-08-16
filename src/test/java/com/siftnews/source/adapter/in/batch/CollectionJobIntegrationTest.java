@@ -10,6 +10,7 @@ import com.siftnews.source.domain.Source;
 import com.siftnews.source.domain.SourceType;
 import com.siftnews.support.AbstractIntegrationTest;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.core.BatchStatus;
@@ -115,8 +116,22 @@ class CollectionJobIntegrationTest extends AbstractIntegrationTest {
 
         // Spring Batch 5는 job/step 소요시간을 Observation API로 기록하고, 부트가 이를
         // MeterRegistry에 바인딩한다. 액추에이터가 이 레지스트리를 /actuator/metrics 로 노출한다.
-        assertThat(meterRegistry.find("spring.batch.job").timer()).isNotNull();
-        assertThat(meterRegistry.find("spring.batch.step").timer()).isNotNull();
+        Timer jobTimer = meterRegistry.find("spring.batch.job")
+                .tag("spring.batch.job.name", "collectionJob")
+                .tag("spring.batch.job.status", "COMPLETED")
+                .timer();
+        Timer stepTimer = meterRegistry.find("spring.batch.step")
+                .tag("spring.batch.step.name", "collectStep")
+                .tag("spring.batch.step.job.name", "collectionJob")
+                .tag("spring.batch.step.status", "COMPLETED")
+                .timer();
+
+        assertThat(jobTimer).isNotNull();
+        assertThat(stepTimer).isNotNull();
+        assertThat(meterRegistry.find("spring.batch.job.active").longTaskTimer())
+                .isNotNull()
+                .satisfies(activeTimer -> assertThat(activeTimer.getId().getTag("spring.batch.job.active.name"))
+                        .isEqualTo("collectionJob"));
     }
 
     @Test

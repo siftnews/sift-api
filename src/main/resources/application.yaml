@@ -45,6 +45,10 @@ sift:
       max-delay-seconds: 3600
 
 management:
+  observations:
+    long-task-timer:
+      # Spring Batch가 spring.batch.job/step.active를 직접 등록하므로 Boot Observation handler의 중복 등록을 막는다.
+      enabled: false
   # profile/default 변경으로 scrape endpoint가 조용히 비활성화되지 않도록 명시한다.
   prometheus:
     metrics:
