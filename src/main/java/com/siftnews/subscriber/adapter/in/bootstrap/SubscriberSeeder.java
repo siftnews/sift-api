@@ -4,6 +4,7 @@ import com.siftnews.subscriber.application.port.in.SeedSubscribersUseCase;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.Ordered;
@@ -28,6 +29,7 @@ class SubscriberSeeder implements ApplicationRunner {
     private final LoadtestScenario scenario;
     private final int overloadSendHour;
 
+    @Autowired
     SubscriberSeeder(
             SeedSubscribersUseCase seedSubscribersUseCase,
             @Value("${sift.load-test.subscribers.count:" + SubscriberSeedData.DEFAULT_COUNT + "}") int count,
