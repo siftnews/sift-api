@@ -56,10 +56,35 @@ class DedupClustererTest {
     }
 
     @Test
+    void equivalentTitleTokenSetsRemainTransitiveCluster() {
+        List<ArticleCluster> clusters = DedupClusterer.cluster(List.of(
+                article(1L, "https://a.com/x", "Spring Boot release", Instant.parse("2026-07-20T00:00:00Z")),
+                article(2L, "https://b.com/y", "release, boot Spring!", Instant.parse("2026-07-21T00:00:00Z")),
+                article(3L, "https://c.com/z", "Spring Boot release notes", Instant.parse("2026-07-22T00:00:00Z")),
+                article(4L, "https://d.com/w", "Bitcoin price surge", Instant.parse("2026-07-23T00:00:00Z"))
+        ), THRESHOLD);
+
+        assertThat(clusters).hasSize(2);
+        assertThat(clusters.get(0).clusterId()).isEqualTo("c-1");
+        assertThat(clusters.get(0).memberIds()).containsExactlyInAnyOrder(1L, 2L, 3L);
+        assertThat(clusters.get(0).representativeId()).isEqualTo(3L);
+    }
+
+    @Test
     void unrelatedArticlesStaySeparate() {
         List<ArticleCluster> clusters = DedupClusterer.cluster(List.of(
                 article(1L, "https://a.com/x", "Spring Boot 릴리스 소식", Instant.parse("2026-07-20T00:00:00Z")),
                 article(2L, "https://b.com/y", "Bitcoin price surges again", Instant.parse("2026-07-21T00:00:00Z"))
+        ), THRESHOLD);
+
+        assertThat(clusters).hasSize(2);
+    }
+
+    @Test
+    void emptyTitlesDoNotFormClusterWithoutSameUrl() {
+        List<ArticleCluster> clusters = DedupClusterer.cluster(List.of(
+                article(1L, "https://a.com/x", "", Instant.parse("2026-07-20T00:00:00Z")),
+                article(2L, "https://b.com/y", null, Instant.parse("2026-07-21T00:00:00Z"))
         ), THRESHOLD);
 
         assertThat(clusters).hasSize(2);
