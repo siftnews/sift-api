@@ -112,6 +112,18 @@ class CollectionJobIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void publishesBatchMetricsToMicrometerRegistry() throws Exception {
+        Timer existingJobTimer = meterRegistry.find("spring.batch.job")
+                .tag("spring.batch.job.name", "collectionJob")
+                .tag("spring.batch.job.status", "COMPLETED")
+                .timer();
+        Timer existingStepTimer = meterRegistry.find("spring.batch.step")
+                .tag("spring.batch.step.name", "collectStep")
+                .tag("spring.batch.step.job.name", "collectionJob")
+                .tag("spring.batch.step.status", "COMPLETED")
+                .timer();
+        long jobCountBefore = existingJobTimer == null ? 0 : existingJobTimer.count();
+        long stepCountBefore = existingStepTimer == null ? 0 : existingStepTimer.count();
+
         jobLauncherTestUtils.launchJob();
 
         // Spring Batch 5는 job/step 소요시간을 Observation API로 기록하고, 부트가 이를
@@ -128,6 +140,8 @@ class CollectionJobIntegrationTest extends AbstractIntegrationTest {
 
         assertThat(jobTimer).isNotNull();
         assertThat(stepTimer).isNotNull();
+        assertThat(jobTimer.count()).isEqualTo(jobCountBefore + 1);
+        assertThat(stepTimer.count()).isEqualTo(stepCountBefore + 1);
         assertThat(meterRegistry.find("spring.batch.job.active").longTaskTimer())
                 .isNotNull()
                 .satisfies(activeTimer -> assertThat(activeTimer.getId().getTag("spring.batch.job.active.name"))

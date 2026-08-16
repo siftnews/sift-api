@@ -165,6 +165,18 @@ class SelectionJobIntegrationTest extends AbstractIntegrationTest {
     void publishesSelectionJobAndStepMetricTags() throws Exception {
         saveArticles();
 
+        Timer existingJobTimer = meterRegistry.find("spring.batch.job")
+                .tag("spring.batch.job.name", "selectionJob")
+                .tag("spring.batch.job.status", "COMPLETED")
+                .timer();
+        Timer existingStepTimer = meterRegistry.find("spring.batch.step")
+                .tag("spring.batch.step.name", "normalizeDedupStep")
+                .tag("spring.batch.step.job.name", "selectionJob")
+                .tag("spring.batch.step.status", "COMPLETED")
+                .timer();
+        long jobCountBefore = existingJobTimer == null ? 0 : existingJobTimer.count();
+        long stepCountBefore = existingStepTimer == null ? 0 : existingStepTimer.count();
+
         JobExecution execution = jobLauncherTestUtils.launchJob(parameters());
 
         assertThat(execution.getStatus()).isEqualTo(BatchStatus.COMPLETED);
@@ -180,6 +192,8 @@ class SelectionJobIntegrationTest extends AbstractIntegrationTest {
 
         assertThat(jobTimer).isNotNull();
         assertThat(stepTimer).isNotNull();
+        assertThat(jobTimer.count()).isEqualTo(jobCountBefore + 1);
+        assertThat(stepTimer.count()).isEqualTo(stepCountBefore + 1);
     }
 
     /**

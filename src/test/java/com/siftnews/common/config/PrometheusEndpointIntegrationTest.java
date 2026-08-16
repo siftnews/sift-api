@@ -64,11 +64,24 @@ class PrometheusEndpointIntegrationTest extends AbstractIntegrationTest {
                 .register(meterRegistry)
                 .record(Duration.ofMillis(100));
 
-        mockMvc.perform(get("/actuator/prometheus"))
+        String prometheus = mockMvc.perform(get("/actuator/prometheus"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("spring_batch_job_seconds_count")))
                 .andExpect(content().string(containsString("spring_batch_job_name=\"selectionJob\"")))
                 .andExpect(content().string(containsString("spring_batch_step_seconds_count")))
-                .andExpect(content().string(containsString("spring_batch_step_job_name=\"selectionJob\"")));
+                .andExpect(content().string(containsString("spring_batch_step_job_name=\"selectionJob\"")))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        assertThat(prometheus.lines())
+                .anyMatch(line -> line.startsWith("spring_batch_job_seconds_count{")
+                        && line.contains("spring_batch_job_name=\"selectionJob\"")
+                        && line.contains("spring_batch_job_status=\"COMPLETED\""));
+        assertThat(prometheus.lines())
+                .anyMatch(line -> line.startsWith("spring_batch_step_seconds_count{")
+                        && line.contains("spring_batch_step_name=\"normalizeDedupStep\"")
+                        && line.contains("spring_batch_step_job_name=\"selectionJob\"")
+                        && line.contains("spring_batch_step_status=\"COMPLETED\""));
     }
 }
