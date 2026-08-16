@@ -12,6 +12,9 @@ final class CollectionJobParameters {
      */
     static final String LAUNCHED_AT = "launchedAt";
 
+    /** loadtest fixture URL namespace를 실행별로 분리하는 식별자. */
+    static final String RUN_ID = "runId";
+
     private CollectionJobParameters() {
     }
 }

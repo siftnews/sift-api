@@ -8,6 +8,7 @@ import com.rometools.rome.io.XmlReader;
 import com.siftnews.source.application.port.out.FetchFeedPort;
 import com.siftnews.source.domain.RawArticle;
 import com.siftnews.source.domain.Source;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.io.InputStream;
@@ -16,6 +17,7 @@ import java.util.List;
 import java.util.Objects;
 
 @Component
+@Profile("!loadtest")
 class RssFeedAdapter implements FetchFeedPort {
 
     @Override

@@ -13,6 +13,8 @@ interface SourceJpaRepository extends JpaRepository<SourceJpaEntity, Long> {
 
     List<SourceJpaEntity> findByActiveTrue();
 
+    List<SourceJpaEntity> findByActiveTrueAndUrlStartingWith(String urlPrefix);
+
     Optional<SourceJpaEntity> findByIdAndActiveTrue(Long id);
 
     /**

@@ -1,5 +1,18 @@
 sift:
   load-test:
+    news:
+      source-count: 10
+      source-url-prefix: https://loadtest.sift.local/news/
+      collection:
+        entries-per-source: 1000
+        # collection fixture 입력을 실행 시각과 무관하게 재현한다.
+        fixture-published-at: 2026-01-01T00:00:00Z
+        article-url-prefix: https://loadtest.sift.local/collection/articles/
+      selection:
+        candidate-count: 10000
+        window-hours: 24
+        save-chunk-size: 500
+        article-url-prefix: https://loadtest.sift.local/selection/articles/
     subscribers:
       count: 100000
       email-domain: loadtest.sift.local
