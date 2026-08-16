@@ -6,6 +6,8 @@ import com.siftnews.source.domain.Category;
 import com.siftnews.source.domain.RawArticle;
 import com.siftnews.support.AbstractIntegrationTest;
 import com.siftnews.support.TestDatabaseFixtures;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -68,6 +70,9 @@ class SelectionJobIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private Clock clock;
+
+    @Autowired
+    private MeterRegistry meterRegistry;
 
     private Long topicId;
     private Instant from;
@@ -154,6 +159,41 @@ class SelectionJobIntegrationTest extends AbstractIntegrationTest {
         // 토픽 키워드가 'Spring'이라 환율 기사는 필터에서 탈락한다.
         assertThat(count("issue_item")).isEqualTo(2);
         assertThat(count("article_score")).isEqualTo(2);
+    }
+
+    @Test
+    void publishesSelectionJobAndStepMetricTags() throws Exception {
+        saveArticles();
+
+        Timer existingJobTimer = meterRegistry.find("spring.batch.job")
+                .tag("spring.batch.job.name", "selectionJob")
+                .tag("spring.batch.job.status", "COMPLETED")
+                .timer();
+        Timer existingStepTimer = meterRegistry.find("spring.batch.step")
+                .tag("spring.batch.step.name", "normalizeDedupStep")
+                .tag("spring.batch.step.job.name", "selectionJob")
+                .tag("spring.batch.step.status", "COMPLETED")
+                .timer();
+        long jobCountBefore = existingJobTimer == null ? 0 : existingJobTimer.count();
+        long stepCountBefore = existingStepTimer == null ? 0 : existingStepTimer.count();
+
+        JobExecution execution = jobLauncherTestUtils.launchJob(parameters());
+
+        assertThat(execution.getStatus()).isEqualTo(BatchStatus.COMPLETED);
+        Timer jobTimer = meterRegistry.find("spring.batch.job")
+                .tag("spring.batch.job.name", "selectionJob")
+                .tag("spring.batch.job.status", "COMPLETED")
+                .timer();
+        Timer stepTimer = meterRegistry.find("spring.batch.step")
+                .tag("spring.batch.step.name", "normalizeDedupStep")
+                .tag("spring.batch.step.job.name", "selectionJob")
+                .tag("spring.batch.step.status", "COMPLETED")
+                .timer();
+
+        assertThat(jobTimer).isNotNull();
+        assertThat(stepTimer).isNotNull();
+        assertThat(jobTimer.count()).isEqualTo(jobCountBefore + 1);
+        assertThat(stepTimer.count()).isEqualTo(stepCountBefore + 1);
     }
 
     /**
