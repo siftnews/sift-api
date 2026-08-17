@@ -1,7 +1,6 @@
 package com.siftnews.content.domain;
 
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -18,16 +17,23 @@ public final class TitleSimilarity {
     }
 
     public static double jaccard(String a, String b) {
-        Set<String> ta = tokenize(a);
-        Set<String> tb = tokenize(b);
+        return jaccard(tokenize(a), tokenize(b));
+    }
+
+    static double jaccard(Set<String> ta, Set<String> tb) {
         if (ta.isEmpty() || tb.isEmpty()) {
             return 0.0;
         }
-        Set<String> intersection = new HashSet<>(ta);
-        intersection.retainAll(tb);
-        Set<String> union = new HashSet<>(ta);
-        union.addAll(tb);
-        return (double) intersection.size() / union.size();
+        Set<String> smaller = ta.size() <= tb.size() ? ta : tb;
+        Set<String> larger = smaller == ta ? tb : ta;
+        int intersectionSize = 0;
+        for (String token : smaller) {
+            if (larger.contains(token)) {
+                intersectionSize++;
+            }
+        }
+        int unionSize = ta.size() + tb.size() - intersectionSize;
+        return (double) intersectionSize / unionSize;
     }
 
     static Set<String> tokenize(String s) {
