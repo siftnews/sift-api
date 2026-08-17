@@ -18,7 +18,7 @@ import java.time.Instant;
  * article_score 테이블 매핑 (MVP-DESIGN §2).
  * <p>
  * {@code UNIQUE(article_id, topic_id)}가 재실행 멱등의 근거다 — 같은 윈도우를 다시 돌려도
- * 행이 늘지 않고 갱신된다. 실제 덮어쓰기는 {@code ArticleScoreJpaRepository.upsert}가 한다.
+ * 행이 늘지 않고 갱신된다. 실제 덮어쓰기는 {@code ArticleScorePersistenceAdapter}의 batch upsert가 한다.
  * <p>
  * {@code breakdown}은 {@link ScoreBreakdown}을 그대로 JSON 컬럼에 싣는다 — topic의
  * {@code keyword_weights[json]}와 같은 관례({@code @JdbcTypeCode(SqlTypes.JSON)})다.
