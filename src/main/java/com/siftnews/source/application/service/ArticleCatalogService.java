@@ -60,7 +60,7 @@ public class ArticleCatalogService implements ArticleCatalog {
 
     @Override
     public void updateDedupClusters(Map<Long, String> clusterIdsByArticleId) {
-        // 빈 맵을 그대로 내리면 어댑터의 IN () 구현이 SQL 문법 오류를 낸다 (#22에서 겪은 결함).
+        // 빈 맵은 불필요한 DB 갱신을 만들지 않도록 조기 반환한다.
         if (clusterIdsByArticleId == null || clusterIdsByArticleId.isEmpty()) {
             return;
         }

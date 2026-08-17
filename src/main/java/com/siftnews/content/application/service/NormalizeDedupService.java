@@ -68,7 +68,7 @@ public class NormalizeDedupService implements NormalizeDedupUseCase {
         }
 
         // 후보 0건은 정상 상황(첫 기동·크롤 실패 직후·좁은 윈도우) — 빈 맵으로 포트를 부르면
-        // 어댑터의 `IN ()` 구현이 SQL 문법 오류를 낼 수 있어 조기 반환한다.
+        // 빈 맵은 불필요한 DB 갱신을 만들지 않도록 조기 반환한다.
         if (clusterIdsByArticleId.isEmpty()) {
             log.info("normalizeDedup 완료: loaded=0, dropped=0, clusters=0 (후보 없음, 포트 호출 생략)");
             return new NormalizeDedupSummary(0, 0, 0);
