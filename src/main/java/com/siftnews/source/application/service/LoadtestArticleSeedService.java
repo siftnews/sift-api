@@ -112,10 +112,12 @@ class LoadtestArticleSeedService implements SeedLoadtestArticlesUseCase {
     private Article article(Source source, String runId, int sourceIndex, int articleIndex, Instant windowFrom) {
         String sourceKey = "%02d".formatted(sourceIndex);
         String articleKey = "%04d".formatted(articleIndex);
-        String title = "Spring loadtest source" + sourceKey + " article";
+        // 각 후보가 서로 다른 뉴스처럼 동작하도록 제목 signature를 article 단위로 만든다.
+        // 공통 토큰은 Jaccard threshold(0.7) 미만으로만 유지해 10,000건이 한 cluster로 합쳐지지 않게 한다.
+        String title = "Spring story source" + sourceKey + " entry" + articleKey + " signature";
         String url = articleUrlPrefix + runId + "/source-" + sourceKey + "/article-" + articleKey;
         String body = ("Spring selection loadtest fixture source=" + sourceKey
-                + "; deterministic candidate body for a 10,000 article workload. ").repeat(8);
+                + " article=" + articleKey + "; deterministic unique candidate body for a 10,000 article workload. ").repeat(8);
         RawArticle raw = new RawArticle(url, title, body, source.getLang(),
                 windowFrom.minusSeconds(articleIndex), source.getCategory());
         return Article.create(raw, source.getSourceId());

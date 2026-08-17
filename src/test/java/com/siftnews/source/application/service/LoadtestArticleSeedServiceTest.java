@@ -39,6 +39,8 @@ class LoadtestArticleSeedServiceTest {
         assertThat(saveArticlePort.saved).hasSize(6)
                 .extracting(Article::getUrl)
                 .allMatch(url -> url.contains("/run-1/"));
+        assertThat(saveArticlePort.saved).extracting(Article::getTitle).doesNotHaveDuplicates();
+        assertThat(saveArticlePort.saved).extracting(Article::getBody).doesNotHaveDuplicates();
         assertThat(saveArticlePort.calls).containsExactly(2, 1, 2, 1);
         assertThat(saveArticlePort.saved).extracting(Article::getSourceId)
                 .containsExactly(1L, 1L, 1L, 2L, 2L, 2L);
