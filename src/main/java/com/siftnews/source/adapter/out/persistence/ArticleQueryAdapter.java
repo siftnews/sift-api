@@ -3,16 +3,19 @@ package com.siftnews.source.adapter.out.persistence;
 import com.siftnews.source.api.ArticleCandidate;
 import com.siftnews.source.api.ArticleExcerpt;
 import com.siftnews.source.application.port.out.ArticleQueryPort;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.Types;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.StringJoiner;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -20,7 +23,17 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 class ArticleQueryAdapter implements ArticleQueryPort {
 
+    private static final int CLUSTER_UPDATE_BATCH_SIZE = 1_000;
+    private static final String UPDATE_DEDUP_CLUSTERS_SQL = """
+            UPDATE article AS target
+            SET dedup_cluster_id = updates.cluster_id
+            FROM (VALUES %s) AS updates(article_id, cluster_id)
+            WHERE target.id = updates.article_id
+            """;
+
     private final ArticleJpaRepository articleJpaRepository;
+    private final EntityManager entityManager;
+    private final JdbcTemplate jdbcTemplate;
 
     @Override
     public List<ArticleCandidate> findCandidates(Instant from, Instant to) {
@@ -30,18 +43,36 @@ class ArticleQueryAdapter implements ArticleQueryPort {
     }
 
     /**
-     * 같은 clusterId를 받는 기사끼리 묶어 값별로 한 번씩 UPDATE 한다 — null(해제)도 하나의 그룹이다.
+     * 기사별 clusterId 갱신을 1,000건씩 한 번의 UPDATE로 반영한다 — null(해제)도 지원한다.
      * <p>
-     * {@code HashMap}은 null 키를 허용하므로 해제 그룹을 따로 다룰 필요가 없다.
+     * JPA 수정 쿼리의 flush/clear 동작을 유지하면서, 후보 수가 클러스터 수에 비례하는 쿼리
+     * 호출로 늘어나지 않게 한다.
      */
     @Override
     @Transactional
     public void updateDedupClusters(Map<Long, String> clusterIdsByArticleId) {
-        Map<String, List<Long>> idsByClusterId = new HashMap<>();
-        for (Map.Entry<Long, String> entry : clusterIdsByArticleId.entrySet()) {
-            idsByClusterId.computeIfAbsent(entry.getValue(), key -> new ArrayList<>()).add(entry.getKey());
+        if (clusterIdsByArticleId == null || clusterIdsByArticleId.isEmpty()) {
+            return;
         }
-        idsByClusterId.forEach(articleJpaRepository::updateDedupClusterId);
+
+        List<Map.Entry<Long, String>> updates = new ArrayList<>(clusterIdsByArticleId.entrySet());
+        entityManager.flush();
+        for (int start = 0; start < updates.size(); start += CLUSTER_UPDATE_BATCH_SIZE) {
+            int end = Math.min(start + CLUSTER_UPDATE_BATCH_SIZE, updates.size());
+            List<Map.Entry<Long, String>> batch = updates.subList(start, end);
+            jdbcTemplate.update(buildUpdateSql(batch.size()), statement -> {
+                int parameterIndex = 1;
+                for (Map.Entry<Long, String> update : batch) {
+                    statement.setObject(parameterIndex++, update.getKey(), Types.BIGINT);
+                    if (update.getValue() == null) {
+                        statement.setNull(parameterIndex++, Types.VARCHAR);
+                    } else {
+                        statement.setString(parameterIndex++, update.getValue());
+                    }
+                }
+            });
+        }
+        entityManager.clear();
     }
 
     @Override
@@ -70,5 +101,13 @@ class ArticleQueryAdapter implements ArticleQueryPort {
                 entity.getTitle(), entity.getLang(), entity.getBody(), entity.getPublishedAt(),
                 entity.getCategory() == null ? null : entity.getCategory().name(),
                 entity.getDedupClusterId());
+    }
+
+    private static String buildUpdateSql(int batchSize) {
+        StringJoiner placeholders = new StringJoiner(", ");
+        for (int index = 0; index < batchSize; index++) {
+            placeholders.add("(?, CAST(? AS varchar))");
+        }
+        return UPDATE_DEDUP_CLUSTERS_SQL.formatted(placeholders);
     }
 }

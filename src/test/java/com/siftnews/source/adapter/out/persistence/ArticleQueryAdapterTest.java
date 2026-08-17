@@ -16,8 +16,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -133,7 +135,41 @@ class ArticleQueryAdapterTest extends AbstractIntegrationTest {
         assertThat(actual.get(cleared)).isNull();
     }
 
-    /** 빈 맵으로 내려가면 어댑터의 {@code IN ()}이 SQL 문법 오류를 낸다 — 서비스가 막아야 한다. */
+    @Test
+    void updatesClustersAcrossBulkBoundaryAndClearsNullValues() {
+        List<ArticleJpaEntity> articles = new ArrayList<>();
+        for (int index = 0; index < 1_001; index++) {
+            articles.add(new ArticleJpaEntity(
+                    7L,
+                    "https://ex.com/bulk-" + index,
+                    "https://ex.com/bulk-" + index,
+                    "대량 제목 " + index,
+                    "대량 본문",
+                    "ko",
+                    FROM.plusSeconds(index + 1L),
+                    Category.DEV));
+        }
+
+        List<ArticleJpaEntity> saved = articleJpaRepository.saveAll(articles);
+        articleJpaRepository.flush();
+
+        Map<Long, String> expected = new LinkedHashMap<>();
+        for (int index = 0; index < saved.size(); index++) {
+            expected.put(saved.get(index).getId(), index == 1_000 ? null : "c-" + index);
+        }
+
+        updateArticleClusterPort.updateClusters(expected);
+        entityManager.clear();
+
+        Map<Long, String> actual = new HashMap<>();
+        for (ArticleJpaEntity article : articleJpaRepository.findAllById(expected.keySet())) {
+            actual.put(article.getId(), article.getDedupClusterId());
+        }
+
+        assertThat(actual).containsExactlyInAnyOrderEntriesOf(expected);
+    }
+
+    /** 빈 맵은 불필요한 DB 호출 없이 no-op이어야 한다. */
     @Test
     void emptyUpdateIsNoOp() {
         updateArticleClusterPort.updateClusters(Map.of());
