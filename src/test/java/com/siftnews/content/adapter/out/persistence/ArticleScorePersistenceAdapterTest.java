@@ -107,6 +107,13 @@ class ArticleScorePersistenceAdapterTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void ignoresEmptyScoreList() {
+        saveArticleScorePort.saveAll(List.of());
+
+        assertThat(articleScoreJpaRepository.findByTopicId(TOPIC_ID)).isEmpty();
+    }
+
+    @Test
     void savesMoreThanOneBatchWithoutChangingTheResults() {
         entityManager.createNativeQuery("""
                 INSERT INTO article (id, created_at, updated_at, source_id, url, normalized_url,
