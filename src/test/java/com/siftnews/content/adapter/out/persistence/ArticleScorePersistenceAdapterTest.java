@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.stream.LongStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -90,5 +91,48 @@ class ArticleScorePersistenceAdapterTest extends AbstractIntegrationTest {
         assertThat(articleScoreJpaRepository.findByTopicId(TOPIC_ID))
                 .extracting(ArticleScoreJpaEntity::getArticleId)
                 .containsExactlyInAnyOrder(11L, 12L);
+    }
+
+    @Test
+    void duplicateArticleTopicPairUsesTheLastScore() {
+        ArticleScore initial = score(11L, 0.2);
+        ArticleScore latest = score(11L, 0.9);
+
+        saveArticleScorePort.saveAll(List.of(initial, latest));
+
+        List<ArticleScoreJpaEntity> found = articleScoreJpaRepository.findByTopicId(TOPIC_ID);
+        assertThat(found).hasSize(1);
+        assertThat(found.get(0).getScore()).isEqualTo(latest.score());
+        assertThat(found.get(0).getBreakdown().keywordScore()).isEqualTo(0.9);
+    }
+
+    @Test
+    void ignoresEmptyScoreList() {
+        saveArticleScorePort.saveAll(List.of());
+
+        assertThat(articleScoreJpaRepository.findByTopicId(TOPIC_ID)).isEmpty();
+    }
+
+    @Test
+    void savesMoreThanOneBatchWithoutChangingTheResults() {
+        entityManager.createNativeQuery("""
+                INSERT INTO article (id, created_at, updated_at, source_id, url, normalized_url,
+                    title, body, lang, category)
+                SELECT id, now(), now(), :sourceId,
+                    'https://fixture.example.com/article/' || id,
+                    'https://fixture.example.com/article/' || id,
+                    'Fixture article', 'Fixture body', 'en', 'DEV'
+                FROM generate_series(100, 1100) AS id
+                """)
+                .setParameter("sourceId", SOURCE_ID)
+                .executeUpdate();
+
+        List<ArticleScore> scores = LongStream.rangeClosed(100L, 1_100L)
+                .mapToObj(articleId -> score(articleId, (articleId % 10) / 10.0))
+                .toList();
+
+        saveArticleScorePort.saveAll(scores);
+
+        assertThat(articleScoreJpaRepository.findByTopicId(TOPIC_ID)).hasSize(1_001);
     }
 }
