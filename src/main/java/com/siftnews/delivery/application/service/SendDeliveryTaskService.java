@@ -8,6 +8,7 @@ import com.siftnews.delivery.application.port.out.UpdateDeliveryTaskPort;
 import com.siftnews.delivery.domain.DeliveryException;
 import com.siftnews.delivery.domain.DeliveryTask;
 import com.siftnews.delivery.domain.DeliveryTaskStatus;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
@@ -23,6 +24,7 @@ public class SendDeliveryTaskService implements SendDeliveryTaskUseCase {
     private final DeliveryRetryPolicy retryPolicy;
     private final HtmlEmailRenderer renderer;
 
+    @Autowired
     public SendDeliveryTaskService(IssueCatalog issueCatalog,
                                    SendEmailPort sendEmailPort,
                                    UpdateDeliveryTaskPort updateDeliveryTaskPort,
