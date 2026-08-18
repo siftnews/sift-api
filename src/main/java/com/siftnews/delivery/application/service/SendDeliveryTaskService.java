@@ -8,14 +8,12 @@ import com.siftnews.delivery.application.port.out.UpdateDeliveryTaskPort;
 import com.siftnews.delivery.domain.DeliveryException;
 import com.siftnews.delivery.domain.DeliveryTask;
 import com.siftnews.delivery.domain.DeliveryTaskStatus;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
 import java.time.Instant;
 
 @Service
-@RequiredArgsConstructor
 public class SendDeliveryTaskService implements SendDeliveryTaskUseCase {
 
     private final IssueCatalog issueCatalog;
@@ -23,7 +21,30 @@ public class SendDeliveryTaskService implements SendDeliveryTaskUseCase {
     private final UpdateDeliveryTaskPort updateDeliveryTaskPort;
     private final Clock clock;
     private final DeliveryRetryPolicy retryPolicy;
-    private final HtmlEmailRenderer renderer = new HtmlEmailRenderer();
+    private final HtmlEmailRenderer renderer;
+
+    public SendDeliveryTaskService(IssueCatalog issueCatalog,
+                                   SendEmailPort sendEmailPort,
+                                   UpdateDeliveryTaskPort updateDeliveryTaskPort,
+                                   Clock clock,
+                                   DeliveryRetryPolicy retryPolicy) {
+        this(issueCatalog, sendEmailPort, updateDeliveryTaskPort, clock, retryPolicy,
+                new HtmlEmailRenderer());
+    }
+
+    SendDeliveryTaskService(IssueCatalog issueCatalog,
+                            SendEmailPort sendEmailPort,
+                            UpdateDeliveryTaskPort updateDeliveryTaskPort,
+                            Clock clock,
+                            DeliveryRetryPolicy retryPolicy,
+                            HtmlEmailRenderer renderer) {
+        this.issueCatalog = issueCatalog;
+        this.sendEmailPort = sendEmailPort;
+        this.updateDeliveryTaskPort = updateDeliveryTaskPort;
+        this.clock = clock;
+        this.retryPolicy = retryPolicy;
+        this.renderer = renderer;
+    }
 
     @Override
     public SendDeliveryTaskResult send(DeliveryTask task) {

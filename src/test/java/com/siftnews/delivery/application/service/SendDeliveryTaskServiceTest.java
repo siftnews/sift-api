@@ -97,13 +97,15 @@ class SendDeliveryTaskServiceTest {
         RecordingTaskUpdates updates = new RecordingTaskUpdates();
         RecordingEmailSender sender = new RecordingEmailSender(null);
         RecordingIssueCatalog issueCatalog = new RecordingIssueCatalog();
-        SendDeliveryTaskService service = service(issueCatalog, sender, updates);
+        RecordingHtmlEmailRenderer renderer = new RecordingHtmlEmailRenderer();
+        SendDeliveryTaskService service = service(issueCatalog, sender, updates, renderer);
 
         service.send(task(107L, "reader1@example.com"));
         service.send(task(108L, "reader2@example.com"));
 
         assertThat(issueCatalog.lookedUpIssueIds).containsExactly(ISSUE_ID, ISSUE_ID);
         assertThat(sender.sent).hasSize(2);
+        assertThat(renderer.renderedIssueIds).containsExactly(ISSUE_ID, ISSUE_ID);
         assertThat(sender.sent.get(0).htmlBody()).isEqualTo(sender.sent.get(1).htmlBody());
     }
 
@@ -143,7 +145,14 @@ class SendDeliveryTaskServiceTest {
     private static SendDeliveryTaskService service(IssueCatalog issueCatalog,
                                                     RecordingEmailSender sender,
                                                     RecordingTaskUpdates updates) {
-        return new SendDeliveryTaskService(issueCatalog, sender, updates, CLOCK, POLICY);
+        return service(issueCatalog, sender, updates, new HtmlEmailRenderer());
+    }
+
+    private static SendDeliveryTaskService service(IssueCatalog issueCatalog,
+                                                    RecordingEmailSender sender,
+                                                    RecordingTaskUpdates updates,
+                                                    HtmlEmailRenderer renderer) {
+        return new SendDeliveryTaskService(issueCatalog, sender, updates, CLOCK, POLICY, renderer);
     }
 
     private static DeliveryTask task(Long taskId, String email) {
@@ -170,6 +179,17 @@ class SendDeliveryTaskServiceTest {
             lookedUpIssueIds.add(issueId);
             return Optional.of(new NewsletterIssue(issueId, "이번 주 Sift",
                     List.of(new NewsletterArticle(1, "기사 제목", "https://example.com/article"))));
+        }
+    }
+
+    private static final class RecordingHtmlEmailRenderer extends HtmlEmailRenderer {
+
+        private final List<Long> renderedIssueIds = new ArrayList<>();
+
+        @Override
+        String render(NewsletterIssue issue) {
+            renderedIssueIds.add(issue.issueId());
+            return super.render(issue);
         }
     }
 

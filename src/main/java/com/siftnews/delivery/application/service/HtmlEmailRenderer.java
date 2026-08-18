@@ -5,7 +5,7 @@ import com.siftnews.content.api.NewsletterIssue;
 import java.net.URI;
 import java.util.Locale;
 
-final class HtmlEmailRenderer {
+class HtmlEmailRenderer {
 
     String render(NewsletterIssue issue) {
         StringBuilder html = new StringBuilder("<html><body><h1>")
