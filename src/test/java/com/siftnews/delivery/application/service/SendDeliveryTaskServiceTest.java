@@ -93,6 +93,23 @@ class SendDeliveryTaskServiceTest {
     }
 
     @Test
+    void repeatsIssueLookupAndHtmlRenderingForEachTask() {
+        RecordingTaskUpdates updates = new RecordingTaskUpdates();
+        RecordingEmailSender sender = new RecordingEmailSender(null);
+        RecordingIssueCatalog issueCatalog = new RecordingIssueCatalog();
+        RecordingHtmlEmailRenderer renderer = new RecordingHtmlEmailRenderer();
+        SendDeliveryTaskService service = service(issueCatalog, sender, updates, renderer);
+
+        service.send(task(107L, "reader1@example.com"));
+        service.send(task(108L, "reader2@example.com"));
+
+        assertThat(issueCatalog.lookedUpIssueIds).containsExactly(ISSUE_ID, ISSUE_ID);
+        assertThat(sender.sent).hasSize(2);
+        assertThat(renderer.renderedIssueIds).containsExactly(ISSUE_ID, ISSUE_ID);
+        assertThat(sender.sent.get(0).htmlBody()).isEqualTo(sender.sent.get(1).htmlBody());
+    }
+
+    @Test
     void movesPermanentFailureToDeadWithoutSchedulingRetry() {
         RecordingTaskUpdates updates = new RecordingTaskUpdates();
         RecordingEmailSender sender = new RecordingEmailSender(DeliveryFailureCategory.PERMANENT);
@@ -122,7 +139,20 @@ class SendDeliveryTaskServiceTest {
 
     private static SendDeliveryTaskService service(RecordingEmailSender sender,
                                                     RecordingTaskUpdates updates) {
-        return new SendDeliveryTaskService(issueCatalog(), sender, updates, CLOCK, POLICY);
+        return service(new RecordingIssueCatalog(), sender, updates);
+    }
+
+    private static SendDeliveryTaskService service(IssueCatalog issueCatalog,
+                                                    RecordingEmailSender sender,
+                                                    RecordingTaskUpdates updates) {
+        return service(issueCatalog, sender, updates, new HtmlEmailRenderer());
+    }
+
+    private static SendDeliveryTaskService service(IssueCatalog issueCatalog,
+                                                    RecordingEmailSender sender,
+                                                    RecordingTaskUpdates updates,
+                                                    HtmlEmailRenderer renderer) {
+        return new SendDeliveryTaskService(issueCatalog, sender, updates, CLOCK, POLICY, renderer);
     }
 
     private static DeliveryTask task(Long taskId, String email) {
@@ -135,19 +165,32 @@ class SendDeliveryTaskServiceTest {
                 attemptCount, NOW.minusSeconds(1), "previous failure", "key-" + taskId);
     }
 
-    private static IssueCatalog issueCatalog() {
-        return new IssueCatalog() {
-            @Override
-            public List<ScheduledIssueReference> findScheduled(LocalDate runDate) {
-                return List.of();
-            }
+    private static final class RecordingIssueCatalog implements IssueCatalog {
 
-            @Override
-            public Optional<NewsletterIssue> findNewsletterIssue(Long issueId) {
-                return Optional.of(new NewsletterIssue(issueId, "이번 주 Sift",
-                        List.of(new NewsletterArticle(1, "기사 제목", "https://example.com/article"))));
-            }
-        };
+        private final List<Long> lookedUpIssueIds = new ArrayList<>();
+
+        @Override
+        public List<ScheduledIssueReference> findScheduled(LocalDate runDate) {
+            return List.of();
+        }
+
+        @Override
+        public Optional<NewsletterIssue> findNewsletterIssue(Long issueId) {
+            lookedUpIssueIds.add(issueId);
+            return Optional.of(new NewsletterIssue(issueId, "이번 주 Sift",
+                    List.of(new NewsletterArticle(1, "기사 제목", "https://example.com/article"))));
+        }
+    }
+
+    private static final class RecordingHtmlEmailRenderer extends HtmlEmailRenderer {
+
+        private final List<Long> renderedIssueIds = new ArrayList<>();
+
+        @Override
+        String render(NewsletterIssue issue) {
+            renderedIssueIds.add(issue.issueId());
+            return super.render(issue);
+        }
     }
 
     private record SentEmail(
